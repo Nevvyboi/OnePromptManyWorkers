@@ -4,8 +4,8 @@ The audience scans a QR, submits a one-line product idea from their phone, and a
 crew of local agents builds a **real landing page** for it, live, on the
 projector. Every token runs on your laptop through Ollama. Nothing leaves the room.
 
-It literally performs the talk's title: one prompt (their idea) becomes many
-workers (Copywriter, Designer, Builder, Skeptic) that build one thing on stage.
+It literally performs the talk's title: one prompt (their idea) becomes seven
+workers that build one thing on stage.
 
 ## The spider net
 
@@ -34,27 +34,21 @@ name. Turn it off with `--live.background=false` if you would rather build only 
 demand.
 
 ```
-              [ copy ]
-             ^    \    ^........
-   tone hint/      \copy        . critique
-           /        v           .  (feedback)
-     [ design ]---->[ build ]   .
-           palette      \       .
-                         v      .
-                      [ skeptic ]
+        [ name ] ----the name----> [ copy ] <---critique---- [ skeptic ]
+            \                        ^  \                        ^
+             the name             tone   copy                  the page
+              \                    hint    \                      |
+               v                     |       v                    |
+          [ art ] --artwork-------> [ build ] ------the page------+
+               ^                                   |
+             palette                            the page
+               |                                   v
+          [ design ]                          [ review ] --polish the cta--> [ copy ]
 ```
 
-1. **Copywriter and Designer start together** (round one is parallel).
-2. The Designer's job is smaller so it lands first, and instead of idling it
-   **assists**: it sends the Copywriter a tone hint.
-3. Both outputs flow into the **Builder**, which assembles the page.
-4. The Builder hands the page to the **Skeptic**.
-5. The Skeptic's critique **loops back** to the Copywriter, who revises the
-   headline live. You watch the hero text change on the projector, with a
-   "revised after the skeptic's critique" tag.
-
-That last edge is the point: output from one agent becoming input to another,
-including going backwards. A net, not a line.
+The two dashed edges are the point: the Reviewer and the Skeptic both send work
+*backwards* to the Copywriter, which rewrites while the room watches. Output from
+one agent becoming input to another, including in reverse. A net, not a line.
 
 ## The three views
 
@@ -102,6 +96,7 @@ mvn spring-boot:run
 3. People submit. Ideas appear in `/control`.
 4. Pick a good one, hit **Run**. The crew assembles the page live.
 5. Read the Skeptic's line out loud. It always gets a laugh.
+6. At the very end, switch the projector to `/gallery` and let the room find theirs.
 
 ## If the model misbehaves
 
