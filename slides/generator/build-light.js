@@ -675,6 +675,38 @@ async function build() {
     s.addNotes("Reflect while the awe is warm. One sentence became a team that split the work and reported back. It self-assembled, it stayed home, it was a hundred lines. The scary part is not that it worked, it is how little it took.");
   }
 
+  // =============================================== THE HARNESS
+  {
+    const s = slide();
+    eyebrow(s, "What you actually watched", 0.62, VIOLET);
+    s.addText([{ text: "The model was the easy part. ", options: { color: INK } }, { text: "This is the work.", options: { color: INDIGO } }],
+      { x: MX, y: 1.1, w: 11.4, h: 0.9, fontFace: DISP, bold: true, fontSize: 30 });
+    s.addText("Swap Qwen for a bigger model and almost nothing here changes. The harness is the part you build, own and get paged about.",
+      { x: MX, y: 1.95, w: 8.6, h: 0.6, fontFace: BODY, fontSize: 15.5, color: MUTED });
+    const items = [
+      ["FiGitBranch", INDIGO, "Parallelism", "Three agents start together. The one that finishes first assists, it does not idle."],
+      ["FiRefreshCw", VIOLET, "Feedback loops", "The Reviewer and the Skeptic send work backwards, and the copy is rewritten."],
+      ["FiShield", ROSE, "Fallbacks", "Every agent has a house answer. Kill Ollama mid-talk and the page still builds."],
+      ["FiUserCheck", TEAL, "Human in the loop", "Nothing reaches the projector until I press Run. I can Hide anything first."],
+      ["FiSliders", AMBER, "Limits", "Rate limits, a queue cap, dedup and a key on the panel. A room of devs will test all four."],
+      ["FiClock", SKY, "Background work", "The queue kept building while I talked. Scheduling is orchestration too."],
+    ];
+    const cw = 3.72, ch = 1.95, gx = 0.28, gy = 0.26, x0 = MX, y0 = 2.75;
+    for (let i = 0; i < items.length; i++) {
+      const col = i % 3, row = Math.floor(i / 3);
+      const x = x0 + col * (cw + gx), y = y0 + row * (ch + gy);
+      card(s, x, y, cw, ch);
+      await chip(s, x + 0.6, y + 0.58, 0.54, items[i][0], items[i][1]);
+      s.addText(items[i][2], { x: x + 1.02, y: y + 0.32, w: cw - 1.25, h: 0.5, fontFace: DISP, bold: true, fontSize: 15.5, color: INK, valign: "middle" });
+      s.addText(items[i][3], { x: x + 0.35, y: y + 1.0, w: cw - 0.7, h: 0.8, fontFace: BODY, fontSize: 12, color: MUTED, lineSpacing: 16 });
+    }
+    s.addText([
+      { text: "None of that is prompting. ", options: { color: MUTED } },
+      { text: "All of it is engineering you already know how to do.", options: { color: INDIGO, bold: true } },
+    ], { x: 2, y: 6.85, w: W - 4, h: 0.5, align: "center", fontFace: BODY, fontSize: 15.5 });
+    s.addNotes("This is the slide that makes the talk worth an hour of a senior engineer's evening. Say it plainly: 'Everything you just watched, the parallel starts, the handoffs, the loops back, the fact that it did not die when I unplugged the model, the fact that nothing rude reached the screen, the fact that the queue kept building while I talked. None of that came from the model. That is a harness, and it is ordinary engineering. Threads, queues, schedulers, validation, a human approval step. The model is a component. The harness is the product.'");
+  }
+
   // =============================================== THE REVEAL
   {
     const s = slide();

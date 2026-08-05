@@ -62,6 +62,10 @@ public class ApiController {
     @GetMapping("/gallery")
     public Map<String, Object> gallery() { return crew.galleryPayload(); }
 
+    /** Has this person's page been built yet? Their phone polls this. */
+    @GetMapping("/mine/{id}")
+    public Map<String, Object> mine(@PathVariable String id) { return crew.mine(id); }
+
     @GetMapping("/events")
     public SseEmitter events() { return crew.subscribe(); }
 

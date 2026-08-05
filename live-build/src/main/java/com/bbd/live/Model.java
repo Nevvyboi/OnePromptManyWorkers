@@ -34,6 +34,13 @@ public final class Model {
     /** The Reviewer's one concrete improvement. */
     public record Review(String verdict, String field, String value, String note) {}
 
+    /** One pricing tier from the Pricer. */
+    public record Tier(String name, String price, String per, String blurb, List<String> lines, boolean featured) {}
+
+    /** One question and answer. */
+    public record Qa(String q, String a) {}
+
     /** Everything the crew made for one idea, kept for the closing gallery. */
-    public record Result(Product product, Palette palette, Copy copy, Art art, Review review, String skeptic) {}
+    public record Result(Product product, Palette palette, Copy copy, Art art, Review review,
+                         List<Tier> pricing, List<Qa> faq, String skeptic) {}
 }

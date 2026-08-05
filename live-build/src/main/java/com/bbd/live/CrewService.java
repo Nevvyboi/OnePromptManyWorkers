@@ -64,6 +64,7 @@ public class CrewService {
     private Agents.Namer namer;
     private Agents.Illustrator illustrator;
     private Agents.Reviewer reviewer;
+    private Agents.Pricer pricer;
 
     // ---------- audience + presenter API ----------
 
@@ -93,7 +94,7 @@ public class CrewService {
         broadcast("tally", Map.of("total", queue.size()));
         // hand back exactly what we stored, so the phone can never show
         // something different from what the room will see
-        return Map.of("ok", true, "position", queue.size(), "stored", t, "mock", mock);
+        return Map.of("ok", true, "id", idea.id, "position", queue.size(), "stored", t, "mock", mock);
     }
 
     /** Presenter dropped this one. It leaves the list and can no longer be run. */
@@ -176,6 +177,7 @@ public class CrewService {
             Map.of("key", "copywriter", "label", "copy"),
             Map.of("key", "designer", "label", "design"),
             Map.of("key", "illustrator", "label", "art"),
+            Map.of("key", "pricer", "label", "price"),
             Map.of("key", "builder", "label", "build"),
             Map.of("key", "reviewer", "label", "review"),
             Map.of("key", "skeptic", "label", "skeptic"));
@@ -188,6 +190,8 @@ public class CrewService {
                 edge("namer", "illustrator", false),
                 edge("designer", "copywriter", false),
                 edge("designer", "illustrator", false),
+                edge("namer", "pricer", false),
+                edge("pricer", "builder", false),
                 edge("copywriter", "builder", false),
                 edge("designer", "builder", false),
                 edge("illustrator", "builder", false),
@@ -211,6 +215,7 @@ public class CrewService {
         broadcast("agent-state", Map.of("key", "namer", "state", "assisting", "note", "done first, so it helps"));
         broadcast("flow", Map.of("from", "namer", "to", "copywriter", "what", "the name"));
         broadcast("flow", Map.of("from", "namer", "to", "illustrator", "what", "the name"));
+        broadcast("flow", Map.of("from", "namer", "to", "pricer", "what", "the name"));
         sleep(500);
         broadcast("agent-state", Map.of("key", "namer", "state", "done"));
 
@@ -228,6 +233,12 @@ public class CrewService {
         broadcast("worker-done", Map.of("key", "illustrator", "payload", art));
         broadcast("agent-state", Map.of("key", "illustrator", "state", "done", "note", "artwork ready"));
         broadcast("flow", Map.of("from", "illustrator", "to", "builder", "what", "artwork"));
+
+        broadcast("agent-state", Map.of("key", "pricer", "state", "working", "note", "working out three tiers…"));
+        List<Tier> pricingLive = safePricing(idea.text, product.name());
+        broadcast("worker-done", Map.of("key", "pricer", "payload", Map.of("pricing", pricingLive)));
+        broadcast("agent-state", Map.of("key", "pricer", "state", "done", "note", "three tiers, one featured"));
+        broadcast("flow", Map.of("from", "pricer", "to", "builder", "what", "pricing"));
 
         Copy copy = copyF.get();
         broadcast("worker-done", Map.of("key", "copywriter", "payload", copy));
@@ -267,7 +278,8 @@ public class CrewService {
         broadcast("agent-state", Map.of("key", "copywriter", "state", "done", "note", "rewritten. the web is settled"));
 
         Copy finalCopy = new Copy(copy.badge(), revised, copy.subhead(), polished, copy.features());
-        idea.result = new Result(product, palette, finalCopy, art, review, note);
+        idea.result = new Result(product, palette, finalCopy, art, review,
+                safePricing(idea.text, product.name()), buildFaq(idea.text), note);
         idea.status = "done";
         broadcast("run-done", Map.of("id", idea.id));
         broadcast("queue", queuePayload());
@@ -293,7 +305,8 @@ public class CrewService {
             String revised = safeRevise(next.text, copy.headline(), note);
             Copy finalCopy = new Copy(copy.badge(), revised, copy.subhead(), polished, copy.features());
             next.result = new Result(product, palette, finalCopy, art,
-                    new Review("one thing to sharpen", "cta", polished, "the call to action was generic"), note);
+                    new Review("one thing to sharpen", "cta", polished, "the call to action was generic"),
+                    safePricing(next.text, product.name()), buildFaq(next.text), note);
             next.status = "built";
             broadcast("queue", queuePayload());
             broadcast("gallery", galleryPayload());
@@ -329,6 +342,7 @@ public class CrewService {
         namer = AiServices.create(Agents.Namer.class, model);
         illustrator = AiServices.create(Agents.Illustrator.class, model);
         reviewer = AiServices.create(Agents.Reviewer.class, model);
+        pricer = AiServices.create(Agents.Pricer.class, model);
     }
 
     private Copy safeCopy(String idea) throws InterruptedException {
@@ -384,6 +398,55 @@ public class CrewService {
         String[] options = {"Try it in 30 seconds", "Get it working today", "See it in action",
                 "Take it for a spin", "Start free, no card", "Let it do the remembering"};
         return pick(options, idea + "pol");
+    }
+
+    private List<Tier> safePricing(String idea, String productName) throws InterruptedException {
+        String mid = null;
+        if (!mock) {
+            try { ensureAgents(); mid = pricer.midPrice(idea); }
+            catch (RuntimeException e) { /* house prices below */ }
+        } else sleep(600);
+        if (mid != null) { mid = mid.strip().replaceAll("[^R0-9]", ""); if (!mid.matches("R\\d{2,4}")) mid = null; }
+        if (mid == null) mid = pick(new String[]{"R49", "R79", "R99", "R120"}, idea + "p1");
+        int midV = Integer.parseInt(mid.substring(1));
+        String top = "R" + Math.max(midV * 3, midV + 100);
+        String s = words(idea);
+        return List.of(
+                new Tier("Starter", "Free", "forever",
+                        "Enough to see whether " + s + " is really your problem.",
+                        List.of("One device", "The basics, properly", "No card needed"), false),
+                new Tier("Everyday", mid, "per month",
+                        "The one most people pick. " + productName + " on all your things.",
+                        List.of("Everything in Starter", "Unlimited use", "Share with family", "Email support"), true),
+                new Tier("For the street", top, "per month",
+                        "When the whole block wants in.",
+                        List.of("Everything in Everyday", "Up to 25 people", "Priority support", "Export anything"), false));
+    }
+
+    private List<Qa> buildFaq(String idea) {
+        String s = words(idea);
+        String short3 = s.split("\\s+").length > 3 ? String.join(" ", Arrays.copyOfRange(s.split("\\s+"), 0, 3)) : s;
+        return List.of(
+                new Qa("Does it actually work for " + short3 + "?",
+                        "Yes, and it keeps working when you forget about it, which is the entire point."),
+                new Qa("Where does my data go?",
+                        "Nowhere. It stays on your device. There is no cloud account and nothing to leak."),
+                new Qa("What does it cost to start?",
+                        "Nothing. Use the free tier for as long as you like, then upgrade only if it earns it."));
+    }
+
+    private static String words(String idea) {
+        return idea.strip().replaceAll("[.\\s]+$", "").replaceFirst("(?i)^an?\\s+", "");
+    }
+
+    /** The finished page for one idea, or null if the crew has not built it yet. */
+    public Idea built(String id) {
+        return queue.stream().filter(i -> i.id.equals(id) && !i.hidden && i.result != null).findFirst().orElse(null);
+    }
+
+    /** Has this person's page been built yet? Their phone polls this. */
+    public Map<String, Object> mine(String id) {
+        return Map.of("ready", built(id) != null);
     }
 
     private String cannedName(String idea) {

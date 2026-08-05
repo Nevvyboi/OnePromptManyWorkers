@@ -7,6 +7,7 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const QRCode = require("qrcode");
+const { renderPage } = require("./page");
 
 const PORT = process.env.PORT || 4000;
 const STATIC = path.join(__dirname, "..", "src", "main", "resources", "static");
@@ -145,6 +146,34 @@ function makeReview(idea) {
   };
 }
 
+// --- Pricer: three tiers, so the page has something to sell ---
+function makePricing(idea, productName) {
+  const s = words(idea), P = productName || "it";
+  const cheap = pick(["Free", "R0", "Free forever"], idea + "p0");
+  const mid = pick(["R49", "R79", "R99", "R120"], idea + "p1");
+  const top = pick(["R199", "R249", "R299", "R350"], idea + "p2");
+  return [
+    { name: "Starter", price: cheap, per: "forever", blurb: `Enough to see whether ${s} is really your problem.`,
+      lines: ["One device", "The basics, properly", "No card needed"] },
+    { name: "Everyday", price: mid, per: "per month", blurb: `The one most people pick. ${P} on all your things.`,
+      lines: ["Everything in Starter", "Unlimited use", "Share with family", "Email support"], featured: true },
+    { name: "For the street", price: top, per: "per month", blurb: "When the whole block wants in.",
+      lines: ["Everything in Everyday", "Up to 25 people", "Priority support", "Export anything"] },
+  ];
+}
+
+function makeFaq(idea) {
+  const s = words(idea);
+  return [
+    { q: `Does it actually work for ${s.split(" ").slice(0,3).join(" ")}?`,
+      a: "Yes, and it keeps working when you forget about it, which is the entire point." },
+    { q: "Where does my data go?",
+      a: "Nowhere. It stays on your device. There is no cloud account and nothing to leak." },
+    { q: "What does it cost to start?",
+      a: "Nothing. Use the free tier for as long as you like, then upgrade only if it earns it." },
+  ];
+}
+
 // --- Skeptic ---
 const skepticNote = idea => {
   const s = words(idea);
@@ -182,7 +211,8 @@ function buildResult(idea) {
   const review = makeReview(idea);
   copy.cta = review.value;
   copy.headline = reviseHeadline(idea, named.name);
-  return { product: named, palette, copy, art: makeArt(idea, palette), review, skeptic: skepticNote(idea) };
+  return { product: named, palette, copy, art: makeArt(idea, palette), review,
+           pricing: makePricing(idea, named.name), faq: makeFaq(idea), skeptic: skepticNote(idea) };
 }
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -192,6 +222,7 @@ const CREW = [
   { key: "copywriter",  label: "copy"    },
   { key: "designer",    label: "design"  },
   { key: "illustrator", label: "art"     },
+  { key: "pricer",      label: "price"   },
   { key: "builder",     label: "build"   },
   { key: "reviewer",    label: "review"  },
   { key: "skeptic",     label: "skeptic" },
@@ -201,7 +232,9 @@ const EDGES = [
   { from: "namer", to: "illustrator" },
   { from: "designer", to: "copywriter" },
   { from: "designer", to: "illustrator" },
+  { from: "namer", to: "pricer" },
   { from: "copywriter", to: "builder" },
+  { from: "pricer", to: "builder" },
   { from: "designer", to: "builder" },
   { from: "illustrator", to: "builder" },
   { from: "builder", to: "reviewer" },
@@ -230,6 +263,7 @@ async function runCrew(idea, name) {
   broadcast("agent-state", { key: "namer", state: "assisting", note: "done first, so it helps" });
   broadcast("flow", { from: "namer", to: "copywriter", what: "the name" });
   broadcast("flow", { from: "namer", to: "illustrator", what: "the name" });
+  broadcast("flow", { from: "namer", to: "pricer", what: "the name" });
   await sleep(900);
   broadcast("agent-state", { key: "namer", state: "done" });
 
@@ -248,6 +282,13 @@ async function runCrew(idea, name) {
   broadcast("worker-done", { key: "illustrator", payload: makeArt(idea.text, palette) });
   broadcast("agent-state", { key: "illustrator", state: "done", note: "artwork ready" });
   broadcast("flow", { from: "illustrator", to: "builder", what: "artwork" });
+
+  // the pricer needs the name before it can sell anything
+  broadcast("agent-state", { key: "pricer", state: "working", note: "working out three tiers…" });
+  await sleep(950);
+  broadcast("worker-done", { key: "pricer", payload: { pricing: makePricing(idea.text, named.name) } });
+  broadcast("agent-state", { key: "pricer", state: "done", note: "three tiers, one featured" });
+  broadcast("flow", { from: "pricer", to: "builder", what: "pricing" });
 
   // the copy lands
   const copy = makeCopy(idea.text, named.name);
@@ -342,6 +383,25 @@ const server = http.createServer(async (req, res) => {
 
   if (p === "/api/info") return json(res, 200, { audienceUrl: AUDIENCE_URL, mock: true });
   if (p === "/api/gallery") return json(res, 200, galleryPayload());
+
+  // "is mine done yet?" for the phone that sent it
+  if (p.startsWith("/api/mine/")) {
+    const it = ideas.find(i => String(i.id) === p.split("/")[3]);
+    return json(res, 200, { ready: !!(it && it.result && !it.hidden) });
+  }
+
+  // the real thing: a standalone landing page anyone can open, keep or email
+  if (p.startsWith("/page/")) {
+    const id = p.split("/")[2];
+    const it = ideas.find(i => String(i.id) === id && i.result && !i.hidden);
+    if (!it) { res.writeHead(404, {"Content-Type":"text/html"}); return res.end("<body style='font-family:system-ui;padding:3rem'>No page for that id yet.</body>"); }
+    const html = renderPage({ name: it.name, idea: it.text, result: it.result });
+    const slug = (it.result.product.name || "page").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const headers = { "Content-Type": "text/html; charset=utf-8" };
+    if (url.searchParams.get("download") === "1") headers["Content-Disposition"] = `attachment; filename="${slug}.html"`;
+    res.writeHead(200, headers);
+    return res.end(html);
+  }
   // the raw submission list is presenter-only: it is unvetted text with names on it
   if (p === "/api/queue") {
     if (!keyOk(url)) return json(res, 403, { ideas: [], error: "presenter only" });
@@ -396,7 +456,7 @@ const server = http.createServer(async (req, res) => {
     broadcast("tally", { total: ideas.length });
     // hand back exactly what we stored, so the phone can never show something
     // different from what the room will see
-    return json(res, 200, { ok:true, position: ideas.length, stored: text, mock:true });
+    return json(res, 200, { ok:true, id: idea.id, position: ideas.length, stored: text, mock:true });
   }
 
   if (p.startsWith("/api/run/") && req.method === "POST") {

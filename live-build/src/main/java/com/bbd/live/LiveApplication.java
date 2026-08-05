@@ -43,6 +43,27 @@ public class LiveApplication {
         }
     }
 
+    /** The real, standalone landing page for one idea. Openable and downloadable. */
+    @org.springframework.stereotype.Controller
+    static class Pages {
+        private final CrewService crew;
+        Pages(CrewService crew) { this.crew = crew; }
+
+        @org.springframework.web.bind.annotation.GetMapping(value = "/page/{id}", produces = "text/html; charset=utf-8")
+        @org.springframework.web.bind.annotation.ResponseBody
+        public org.springframework.http.ResponseEntity<String> page(
+                @org.springframework.web.bind.annotation.PathVariable String id,
+                @org.springframework.web.bind.annotation.RequestParam(required = false) String download) {
+            Model.Idea idea = crew.built(id);
+            if (idea == null) return org.springframework.http.ResponseEntity.status(404)
+                    .body("<body style='font-family:system-ui;padding:3rem'>No page for that id yet.</body>");
+            var b = org.springframework.http.ResponseEntity.ok();
+            if ("1".equals(download))
+                b = b.header("Content-Disposition", "attachment; filename=\"" + PageWriter.slug(idea.result) + ".html\"");
+            return b.body(PageWriter.render(idea));
+        }
+    }
+
     /** Prints the three URLs, including the private one, once the port is known. */
     @org.springframework.stereotype.Component
     static class Banner {

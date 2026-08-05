@@ -77,6 +77,17 @@ public final class Agents {
         String polish(@V("idea") String idea, @V("cta") String cta);
     }
 
+    /** Invents the middle price. We build the three tiers around it in Java. */
+    public interface Pricer {
+        @SystemMessage("""
+            You price consumer software for a South African audience. Given a product idea,
+            reply with ONE monthly price for the middle tier, in rands, in the form R49 or
+            R120. Nothing else, no words, no range.
+            """)
+        @UserMessage("Product idea: {{it}}")
+        String midPrice(String idea);
+    }
+
     /** One honest, useful criticism. */
     public interface Skeptic {
         @SystemMessage("""

@@ -41,6 +41,10 @@
   .done h2{font-weight:800;font-size:1.7rem}
   .done p{color:var(--muted);max-width:26ch}
   .pos{font-family:var(--mono);color:var(--amber);font-size:1rem}
+  .mine{display:none;background:var(--teal);color:#06201c;font-weight:800;text-decoration:none;
+        padding:14px 22px;border-radius:13px;font-size:1.02rem;animation:pop .4s ease}
+  .mine.show{display:inline-block}
+  @keyframes pop{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
   .again{background:none;border:1px solid var(--line);color:var(--muted);font-weight:600;font-size:.95rem;padding:13px;width:auto;padding-left:26px;padding-right:26px}
   .dots{display:flex;gap:7px;margin-top:.4rem}
   .dots i{width:9px;height:9px;border-radius:50%;display:block}
@@ -75,6 +79,7 @@
     <div class="sent"><span class="lbl">you sent</span><span id="sentText"></span></div>
     <p id="donemsg">Keep this screen open and watch the big screen. The speaker picks the ones to build, so yours might come up.</p>
     <div class="pos" id="pos"></div>
+    <a class="mine" id="mine" href="#" target="_blank">Your page is ready. Open it &#8599;</a>
     <button class="again" id="again">Send another idea</button>
   </div>
 
@@ -123,12 +128,32 @@
       $("#pos").textContent = d.position ? `${d.position} idea${d.position === 1 ? "" : "s"} sent by the room so far` : "";
       $("#form").classList.add("hide");
       $("#done").classList.add("show");
+      if (d.id) watchForMine(d.id);
     }catch(e){ err.textContent = "Can't reach the server. Are you on the room's Wi-Fi?"; $("#send").disabled=false; }
+  }
+
+  // the crew builds in the background; tell them the moment theirs exists
+  let watcher = null;
+  function watchForMine(id){
+    clearInterval(watcher);
+    const link = $("#mine"); link.classList.remove("show");
+    watcher = setInterval(async () => {
+      try{
+        const r = await fetch("/api/mine/" + id);
+        const d = await r.json();
+        if (d.ready){
+          clearInterval(watcher);
+          link.href = "/page/" + id;
+          link.classList.add("show");
+        }
+      }catch(e){}
+    }, 3000);
   }
 
   $("#again").addEventListener("click", () => {
     idea.value = ""; count.textContent="0"; $("#send").disabled=false; err.textContent="";
     // keep the name: they are the same person, and we credit them on screen
+    clearInterval(watcher); $("#mine").classList.remove("show");
     $("#done").classList.remove("show"); $("#form").classList.remove("hide"); idea.focus();
   });
 </script>

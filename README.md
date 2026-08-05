@@ -55,6 +55,16 @@ Because the crew is a **spider net**, not a pipeline: agents run in parallel, th
 one that finishes first assists another, and **two** critiques loop back, so the
 Copywriter rewrites both the call to action and the headline live on the projector.
 
+### Everyone leaves with a real page
+
+The crew does not produce a mockup. Each idea becomes a **standalone HTML file**:
+nav, hero with generated artwork, features, three pricing tiers, an FAQ, an email
+capture and a footer crediting the person who sent it. Served at `/page/{id}`,
+downloadable at `/page/{id}?download=1`, and the sender's own phone shows
+**"Your page is ready"** the moment the crew finishes it.
+
+<img src="assets/live-page.png" alt="A generated landing page: nav, hero, features, pricing, FAQ, sign-up" width="620">
+
 ### And the closing reveal
 
 Ideas do not just sit in a queue. From the moment someone sends one, the crew
@@ -113,7 +123,8 @@ before the day, follow [REHEARSAL.md](REHEARSAL.md).
 
 ## The deck
 
-Twenty-seven slides that climb from a single prompt to a live swarm. Open
+Thirty slides that climb from a single prompt to a live swarm, and end on the
+point that matters: **the model was the easy part, the harness is the work**. Open
 [`deck/index.html`](deck/index.html) in any browser and press **F** for fullscreen,
 **N** for presenter notes. The same talk is in [`slides/`](slides/) as PowerPoint.
 
@@ -124,7 +135,7 @@ Twenty-seven slides that climb from a single prompt to a live swarm. Open
   </tr>
   <tr>
     <td><img src="assets/deck-levers.png" alt="Six levers slide"></td>
-    <td><img src="assets/deck-live-build.png" alt="Live build slide"></td>
+    <td><img src="assets/deck-harness.png" alt="The harness slide"></td>
   </tr>
 </table>
 

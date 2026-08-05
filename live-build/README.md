@@ -20,10 +20,26 @@ another. The stage draws this live as a graph whose edges pulse as work flows.
 | **Illustrator** | draws the hero artwork (SVG, no image files) |
 | **Builder** | assembles the page |
 | **Reviewer** | sends back one concrete polish |
+| **Pricer** | invents three pricing tiers |
 | **Skeptic** | asks the hard question |
 
 Two edges run *backwards*: the Reviewer's polish and the Skeptic's critique both
 return to the Copywriter, who rewrites live on the projector.
+
+## What the crew actually produces
+
+Not a mockup. A **standalone HTML file** per idea, with everything inlined:
+
+```
+GET /page/{id}              open it
+GET /page/{id}?download=1   keep it (braathat.html)
+GET /api/mine/{id}          the sender's phone polls this
+```
+
+nav · hero with generated SVG artwork · three features · three pricing tiers ·
+an FAQ · an email capture · a footer crediting whoever sent the idea. No
+frameworks, no external requests, nothing to install. The phone that submitted
+shows a green **"Your page is ready"** button the moment it exists.
 
 ## Background builds and the closing gallery
 

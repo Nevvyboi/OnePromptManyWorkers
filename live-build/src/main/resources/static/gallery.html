@@ -57,6 +57,11 @@
   .mini .fx div{background:var(--sf);border-radius:5px;padding:.32rem .35rem;font-size:.5rem;color:var(--mut);line-height:1.25;overflow:hidden}
   .mini .fx b{display:block;color:var(--ink2);font-size:.55rem;margin-bottom:.1rem}
   .card .sk{font-size:.63rem;color:var(--rose);padding:.5rem .8rem .6rem;border-top:1px solid var(--line);line-height:1.4;background:#0f131c}
+  .card .acts{display:flex;border-top:1px solid var(--line)}
+  .card .acts a{flex:1;text-align:center;padding:.55rem .4rem;font-family:var(--mono);font-size:.63rem;
+                color:var(--muted);text-decoration:none;letter-spacing:.06em}
+  .card .acts a:first-child{border-right:1px solid var(--line);color:var(--amber)}
+  .card .acts a:hover{background:#151a24;color:var(--paper)}
   .card .sk b{font-family:var(--mono);font-size:.5rem;letter-spacing:.12em;text-transform:uppercase;display:block;color:var(--rose);margin-bottom:.15rem;opacity:.8}
 
   footer{flex:none;padding:1.2vh 3vw;border-top:1px solid var(--line);display:flex;justify-content:space-between;
@@ -118,7 +123,8 @@
         <span class="cta">${esc(c.cta||"Get started")}</span>
         <div class="fx">${(c.features||[]).slice(0,3).map(f=>`<div><b>${esc(f.title)}</b>${esc((f.body||"").slice(0,44))}…</div>`).join("")}</div>
       </div>
-      ${R.skeptic ? `<div class="sk"><b>the skeptic said</b>${esc(R.skeptic)}</div>` : ""}`;
+      ${R.skeptic ? `<div class="sk"><b>the skeptic said</b>${esc(R.skeptic)}</div>` : ""}
+      <div class="acts"><a href="/page/${item.id}" target="_blank">Open the page &#8599;</a><a href="/page/${item.id}?download=1">Download</a></div>`;
     return el;
   }
 
