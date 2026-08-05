@@ -10,7 +10,7 @@ const Fi = require("react-icons/fi");
 
 // ====== EDIT THESE with the real links / your hotspot IP, then re-run ======
 const LINKEDIN = "https://www.linkedin.com/in/nevin-tom";
-const GITHUB = "https://github.com/Nevvyboi/one-prompt-many-workers";
+const GITHUB = "https://github.com/Nevvyboi/OnePromptManyWorkers";
 // The audience join URL. On stage, prefer the app's live /join screen (auto IP);
 // this baked QR is a backup. Set it to your laptop's hotspot IP if you want it real.
 const JOIN_URL = "http://172.20.10.2:8080/";
