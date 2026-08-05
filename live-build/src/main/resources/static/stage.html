@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Build — the stage</title>
+<style>
+  :root{
+    --ink:#0B0D12; --ink2:#0E1119; --panel:#141824; --panel2:#10131c; --line:#242a3a;
+    --paper:#ECE7DE; --muted:#8A8FA0; --faint:#5a6072;
+    --amber:#F5A524; --teal:#2DD4BF; --violet:#8B5CF6; --rose:#FB7185; --sky:#38BDF8;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --serif:"Iowan Old Style",Palatino,Georgia,serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden}
+  body{background:radial-gradient(120% 90% at 20% -10%,#12151E 0%,var(--ink) 55%);color:var(--paper);font-family:var(--sans);display:flex;flex-direction:column;height:100vh}
+
+  header{display:flex;align-items:center;gap:1.2rem;padding:1.5vh 2.4vw;border-bottom:1px solid var(--line);flex:none}
+  .live{display:inline-flex;align-items:center;gap:.6rem;font-family:var(--mono);font-size:.78rem;letter-spacing:.28em;text-transform:uppercase;color:var(--amber)}
+  .live .blip{width:11px;height:11px;border-radius:50%;background:var(--amber);animation:blip 1.5s infinite}
+  @keyframes blip{0%{box-shadow:0 0 0 0 rgba(245,165,36,.55)}70%{box-shadow:0 0 0 13px rgba(245,165,36,0)}100%{box-shadow:0 0 0 0 rgba(245,165,36,0)}}
+  header .idea{flex:1;font-family:var(--serif);font-size:clamp(1.1rem,2.2vw,2rem);color:var(--paper);line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  header .idea .lbl{font-family:var(--mono);font-size:.66rem;letter-spacing:.2em;color:var(--faint);text-transform:uppercase;display:block;margin-bottom:.15rem}
+  header .by{font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+
+  main{flex:1;display:grid;grid-template-columns:26% 1fr;gap:2vw;padding:2.2vh 2.4vw;min-height:0}
+
+  /* crew column */
+  .crew{display:flex;flex-direction:column;gap:1rem;min-height:0}
+  .crew .h{font-family:var(--mono);font-size:.7rem;letter-spacing:.24em;text-transform:uppercase;color:var(--faint)}
+  .agents{display:flex;flex-direction:column;gap:.9rem;overflow:hidden}
+  .agent{border:1px solid var(--line);border-radius:14px;padding:.95rem 1.05rem;background:var(--panel);position:relative;opacity:.5;transition:opacity .3s,border-color .3s,box-shadow .3s}
+  .agent.active{opacity:1}
+  .agent.working{border-color:var(--ac);box-shadow:0 0 0 1px var(--ac),0 14px 40px -22px var(--ac)}
+  .agent.done{opacity:1;border-color:var(--ac)}
+  .agent .top{display:flex;align-items:center;gap:.7rem}
+  .agent .node{width:14px;height:14px;border-radius:50%;background:var(--ac);flex:none;position:relative}
+  .agent.working .node::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid var(--ac);border-top-color:transparent;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .agent .role{font-family:var(--mono);font-size:.92rem;letter-spacing:.02em;color:var(--paper)}
+  .agent .st{margin-left:auto;font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+  .agent.working .st{color:var(--ac)}
+  .agent.done .st{color:var(--ac)}
+  .agent .out{font-size:.82rem;color:var(--muted);line-height:1.4;margin-top:.55rem;max-height:0;overflow:hidden;transition:max-height .4s ease,margin .3s}
+  .agent.done .out,.agent.working .out{max-height:8rem;margin-top:.55rem}
+
+  /* build column: a browser frame */
+  .build{min-height:0;display:flex;flex-direction:column}
+  .frame{flex:1;border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;background:#fff;box-shadow:0 40px 90px -50px #000;min-height:0}
+  .chrome{flex:none;display:flex;align-items:center;gap:.5rem;padding:.6rem .9rem;background:#0d1017;border-bottom:1px solid var(--line)}
+  .chrome .dot{width:11px;height:11px;border-radius:50%}
+  .chrome .url{margin-left:.6rem;font-family:var(--mono);font-size:.72rem;color:var(--faint);background:#161a24;padding:.3rem .8rem;border-radius:7px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .viewport{flex:1;overflow:auto;position:relative}
+
+  /* the page being built */
+  .pg{--pg-bg:#0e1016;--pg-surface:#171a22;--pg-ink:#ECE7DE;--pg-muted:#9aa0ae;--pg-primary:#F5A524;--pg-accent:#38BDF8;--pg-font:var(--sans);
+      min-height:100%;background:var(--pg-bg);color:var(--pg-ink);font-family:var(--pg-font);
+      transition:background .8s ease,color .8s ease;padding:clamp(1.4rem,3vw,3rem)}
+  .waiting{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.4rem;text-align:center;color:var(--pg-muted)}
+  .waiting .pulse{width:70px;height:70px;border-radius:50%;background:var(--amber);opacity:.85;animation:pulse 1.8s ease-in-out infinite}
+  @keyframes pulse{0%,100%{transform:scale(.85);opacity:.5}50%{transform:scale(1.1);opacity:.95}}
+  .waiting h3{font-family:var(--serif);font-size:1.8rem;color:#2a2e38}
+  .waiting p{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:#242833}
+
+  .sec{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
+  .sec.in{opacity:1;transform:none}
+  .hero h1{font-family:var(--pg-font);font-weight:800;font-size:clamp(2rem,4.6vw,3.6rem);line-height:1.05;letter-spacing:-.02em;max-width:20ch}
+  .hero .subh{font-size:clamp(1rem,1.7vw,1.4rem);color:var(--pg-muted);margin-top:1rem;max-width:44ch;line-height:1.5}
+  .hero .cta{display:inline-block;margin-top:1.6rem;background:var(--pg-primary);color:#12100a;font-weight:700;padding:.85rem 1.6rem;border-radius:11px;font-size:1.05rem}
+  .badge{display:inline-block;font-family:var(--mono);font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--pg-primary);border:1px solid var(--pg-primary);border-radius:20px;padding:.3rem .8rem;margin-bottom:1.2rem}
+  .feats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:2.4rem}
+  @media(max-width:1100px){.feats{grid-template-columns:1fr}}
+  .feat{background:var(--pg-surface);border-radius:13px;padding:1.3rem 1.2rem}
+  .feat .fi{width:34px;height:34px;border-radius:9px;background:var(--pg-accent);opacity:.9;margin-bottom:.8rem;display:flex;align-items:center;justify-content:center}
+  .feat h4{font-size:1.15rem;font-weight:700;margin-bottom:.4rem}
+  .feat p{font-size:.92rem;color:var(--pg-muted);line-height:1.5}
+  .skeptic{margin-top:2rem;border-left:3px solid var(--rose);background:rgba(251,113,133,.08);padding:.9rem 1.2rem;border-radius:0 10px 10px 0;font-size:.95rem;color:var(--pg-muted)}
+  .skeptic b{color:var(--rose);font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;display:block;margin-bottom:.3rem}
+
+  footer{flex:none;display:flex;align-items:center;justify-content:space-between;padding:1.2vh 2.4vw;border-top:1px solid var(--line);font-family:var(--mono);font-size:.74rem;color:var(--faint);letter-spacing:.1em}
+  footer .join{color:var(--muted)} footer .join b{color:var(--amber)}
+  .tally b{color:var(--paper)}
+</style>
+</head>
+<body>
+  <header>
+    <span class="live"><span class="blip"></span> Live Build</span>
+    <div class="idea"><span class="lbl">one prompt</span><span id="ideaText">waiting for an idea…</span></div>
+    <span class="by" id="byText"></span>
+  </header>
+
+  <main>
+    <section class="crew">
+      <div class="h">the crew</div>
+      <div class="agents" id="agents"></div>
+    </section>
+
+    <section class="build">
+      <div class="frame">
+        <div class="chrome">
+          <span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span>
+          <span class="url" id="url">about:blank</span>
+        </div>
+        <div class="viewport">
+          <div class="pg" id="pg">
+            <div class="waiting" id="waiting">
+              <div class="pulse"></div>
+              <h3>Ready for your idea</h3>
+              <p>scan the code · type one line · watch it get built</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span class="tally"><b id="tally">0</b> ideas submitted</span>
+    <span class="join">scan the QR to join · everything runs <b>on this laptop</b></span>
+    <span id="mode"></span>
+  </footer>
+
+<script>
+  const AC = { planner:"var(--amber)", copywriter:"var(--teal)", designer:"var(--violet)", builder:"var(--sky)", skeptic:"var(--rose)" };
+  const agentsEl = document.getElementById("agents");
+  const pg = document.getElementById("pg");
+  let pageState = null;
+
+  function agentCard(key, label){
+    let el = document.getElementById("ag-"+key);
+    if (el) return el;
+    el = document.createElement("div");
+    el.className = "agent"; el.id = "ag-"+key;
+    el.style.setProperty("--ac", AC[key] || "var(--muted)");
+    el.innerHTML = `<div class="top"><span class="node"></span><span class="role">${label}</span><span class="st">queued</span></div><div class="out"></div>`;
+    agentsEl.appendChild(el);
+    return el;
+  }
+  function setAgent(key, state, text){
+    const el = document.getElementById("ag-"+key); if(!el) return;
+    el.classList.remove("working","done"); el.classList.add("active");
+    if(state) el.classList.add(state);
+    el.querySelector(".st").textContent = state==="working"?"working":state==="done"?"done":"queued";
+    if(text!=null) el.querySelector(".out").textContent = text;
+  }
+
+  function ensurePage(){
+    if (pageState) return;
+    document.getElementById("waiting")?.remove();
+    pageState = document.createElement("div");
+    pageState.innerHTML = `
+      <div class="sec hero" id="s-hero"><span class="badge" id="p-badge">new</span><h1 id="p-head"></h1><div class="subh" id="p-sub"></div><span class="cta" id="p-cta"></span></div>
+      <div class="sec feats" id="s-feats"></div>
+      <div class="sec skeptic" id="s-skeptic" style="display:none"><b>the skeptic says</b><span id="p-skeptic"></span></div>`;
+    pg.appendChild(pageState);
+  }
+  const show = id => { const e=document.getElementById(id); if(e){ e.style.display=""; requestAnimationFrame(()=>e.classList.add("in")); } };
+
+  function applyCopy(c){
+    ensurePage();
+    document.getElementById("p-badge").textContent = c.badge || "introducing";
+    document.getElementById("p-head").textContent = c.headline || "";
+    document.getElementById("p-sub").textContent = c.subhead || "";
+    document.getElementById("p-cta").textContent = c.cta || "Get started";
+    show("s-hero");
+    const feats = document.getElementById("s-feats"); feats.innerHTML="";
+    (c.features||[]).forEach(f=>{
+      const d=document.createElement("div"); d.className="feat";
+      d.innerHTML=`<div class="fi"></div><h4>${esc(f.title)}</h4><p>${esc(f.body)}</p>`;
+      feats.appendChild(d);
+    });
+    show("s-feats");
+  }
+  function applyDesign(d){
+    ensurePage();
+    const s = pg.style;
+    if(d.bg) s.setProperty("--pg-bg", d.bg);
+    if(d.surface) s.setProperty("--pg-surface", d.surface);
+    if(d.ink) s.setProperty("--pg-ink", d.ink);
+    if(d.muted) s.setProperty("--pg-muted", d.muted);
+    if(d.primary) s.setProperty("--pg-primary", d.primary);
+    if(d.accent) s.setProperty("--pg-accent", d.accent);
+    if(d.font) s.setProperty("--pg-font", d.font);
+  }
+  function applySkeptic(t){ ensurePage(); document.getElementById("p-skeptic").textContent=t; show("s-skeptic"); }
+  const esc = s => (s||"").replace(/[&<>]/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[m]));
+  const slug = s => (s||"idea").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,26);
+
+  function resetStage(idea, name){
+    agentsEl.innerHTML=""; pageState=null;
+    pg.innerHTML = `<div class="waiting" id="waiting"><div class="pulse"></div><h3>Assembling the crew…</h3><p>${esc(idea||"")}</p></div>`;
+    document.getElementById("ideaText").textContent = idea || "…";
+    document.getElementById("byText").textContent = name ? "by "+name : "";
+    document.getElementById("url").textContent = "https://"+slug(idea)+".local";
+  }
+
+  // ---- SSE ----
+  const es = new EventSource("/api/events");
+  es.addEventListener("info", e => { const d=JSON.parse(e.data); document.getElementById("mode").textContent = d.mock ? "mock mode" : "qwen · local"; if(d.tally!=null) document.getElementById("tally").textContent=d.tally; });
+  es.addEventListener("tally", e => { document.getElementById("tally").textContent = JSON.parse(e.data).total; });
+  es.addEventListener("run-start", e => { const d=JSON.parse(e.data); resetStage(d.idea, d.name); });
+  es.addEventListener("crew", e => { const d=JSON.parse(e.data); agentsEl.innerHTML=""; (d.workers||[]).forEach(w=>agentCard(w.key, w.label)); });
+  es.addEventListener("worker-start", e => { const d=JSON.parse(e.data); setAgent(d.key,"working", d.note||"thinking…"); });
+  es.addEventListener("worker-done", e => {
+    const d=JSON.parse(e.data);
+    if(d.key==="copywriter") applyCopy(d.payload);
+    if(d.key==="designer") applyDesign(d.payload);
+    if(d.key==="skeptic") applySkeptic(d.payload && d.payload.note || d.payload);
+    setAgent(d.key,"done", d.summary || "");
+  });
+  es.addEventListener("run-done", e => {});
+  es.onerror = () => {/* auto-reconnects */};
+</script>
+</body>
+</html>

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>One Prompt. Many Workers. — join in</title>
+<style>
+  :root{
+    --ink:#0B0D12; --panel:#141824; --line:#2A3040; --paper:#ECE7DE; --muted:#8A8FA0;
+    --amber:#F5A524; --teal:#2DD4BF; --violet:#8B5CF6; --rose:#FB7185; --sky:#38BDF8;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{background:radial-gradient(120% 90% at 50% 0%,#12151E 0%,var(--ink) 60%);color:var(--paper);font-family:var(--sans);min-height:100%;display:flex;flex-direction:column;padding:26px 22px 40px}
+  .eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.32em;text-transform:uppercase;color:var(--amber);display:flex;align-items:center;gap:.6rem;margin-bottom:auto}
+  .eyebrow .d{width:9px;height:9px;border-radius:50%;background:var(--amber);box-shadow:0 0 12px var(--amber)}
+  h1{font-family:var(--sans);font-weight:800;font-size:clamp(1.9rem,8vw,2.6rem);line-height:1.05;letter-spacing:-.02em;margin:1.4rem 0 .5rem}
+  h1 em{font-style:normal;color:var(--amber)}
+  .sub{color:var(--muted);font-size:1rem;line-height:1.5;max-width:30ch;margin-bottom:1.6rem}
+  label{font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);display:block;margin:1.1rem 0 .5rem}
+  textarea,input{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:14px;color:var(--paper);font-family:var(--sans);font-size:1.1rem;padding:16px 16px;resize:none;outline:none;transition:border-color .2s}
+  textarea:focus,input:focus{border-color:var(--amber)}
+  textarea{min-height:118px;line-height:1.4}
+  .count{font-family:var(--mono);font-size:.72rem;color:var(--muted);text-align:right;margin-top:.4rem}
+  button{width:100%;margin-top:1.4rem;background:var(--amber);color:#1a1204;border:none;border-radius:14px;font-family:var(--sans);font-weight:800;font-size:1.15rem;padding:17px;cursor:pointer;transition:transform .1s,opacity .2s}
+  button:active{transform:scale(.98)}
+  button:disabled{opacity:.5}
+  .hint{font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-top:1.2rem;line-height:1.7}
+  .hint b{color:var(--paper)}
+  /* success */
+  .done{display:none;flex-direction:column;align-items:center;text-align:center;margin:auto 0;gap:1rem}
+  .done.show{display:flex}
+  .form.hide{display:none}
+  .check{width:88px;height:88px;border-radius:50%;background:rgba(45,212,191,.12);border:1px solid var(--teal);display:flex;align-items:center;justify-content:center}
+  .check svg{width:44px;height:44px;stroke:var(--teal);fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+  .done h2{font-weight:800;font-size:1.7rem}
+  .done p{color:var(--muted);max-width:26ch}
+  .pos{font-family:var(--mono);color:var(--amber);font-size:1rem}
+  .again{background:none;border:1px solid var(--line);color:var(--muted);font-weight:600;font-size:.95rem;padding:13px;width:auto;padding-left:26px;padding-right:26px}
+  .dots{display:flex;gap:7px;margin-top:.4rem}
+  .dots i{width:9px;height:9px;border-radius:50%;display:block}
+  .foot{font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;color:#4a5060;text-align:center;margin-top:2rem;text-transform:uppercase}
+  .err{color:var(--rose);font-size:.85rem;margin-top:.6rem;min-height:1rem}
+</style>
+</head>
+<body>
+  <div class="eyebrow"><span class="d"></span> One Prompt. Many Workers.</div>
+
+  <div class="form" id="form">
+    <h1>Give the crew<br>an <em>idea.</em></h1>
+    <p class="sub">Type any product idea in one line. A crew of AI agents will build a landing page for it, live, on the big screen.</p>
+
+    <label for="idea">Your idea</label>
+    <textarea id="idea" maxlength="120" placeholder="an app that waters your plants when you forget"></textarea>
+    <div class="count"><span id="count">0</span>/120</div>
+
+    <label for="name">Your name <span style="color:#4a5060">(optional)</span></label>
+    <input id="name" maxlength="24" placeholder="so we can credit you on screen">
+
+    <div class="err" id="err"></div>
+    <button id="send">Send it to the crew</button>
+
+    <div class="hint">The workers run on <b>a laptop in this room</b>. Nothing you type leaves the building.</div>
+    <div class="dots"><i style="background:var(--teal)"></i><i style="background:var(--violet)"></i><i style="background:var(--amber)"></i><i style="background:var(--rose)"></i><i style="background:var(--sky)"></i></div>
+  </div>
+
+  <div class="done" id="done">
+    <div class="check"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></div>
+    <h2>You're in.</h2>
+    <p id="donemsg">Watch the screen. The crew might build yours next.</p>
+    <div class="pos" id="pos"></div>
+    <button class="again" id="again">Send another idea</button>
+  </div>
+
+  <div class="foot">served locally · bbd tech talk</div>
+
+<script>
+  const $ = s => document.querySelector(s);
+  const idea = $("#idea"), name = $("#name"), count = $("#count"), err = $("#err");
+  idea.addEventListener("input", () => count.textContent = idea.value.length);
+  idea.focus();
+
+  $("#send").addEventListener("click", submit);
+  idea.addEventListener("keydown", e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit(); });
+
+  async function submit(){
+    const text = idea.value.trim();
+    err.textContent = "";
+    if (text.length < 3){ err.textContent = "Give it a few more words."; return; }
+    $("#send").disabled = true;
+    try{
+      const r = await fetch("/api/submit", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ text, name: name.value.trim() })
+      });
+      const d = await r.json();
+      if (!d.ok){ err.textContent = d.error || "Something went wrong. Try again."; $("#send").disabled=false; return; }
+      $("#pos").textContent = d.position ? `#${d.position} in the queue` : "";
+      $("#donemsg").textContent = d.mock ? "Watch the screen. The crew might build yours next." : "Watch the screen. The crew might build yours next.";
+      $("#form").classList.add("hide");
+      $("#done").classList.add("show");
+    }catch(e){ err.textContent = "Can't reach the server. Are you on the room's Wi-Fi?"; $("#send").disabled=false; }
+  }
+
+  $("#again").addEventListener("click", () => {
+    idea.value = ""; name.value=""; count.textContent="0"; $("#send").disabled=false;
+    $("#done").classList.remove("show"); $("#form").classList.remove("hide"); idea.focus();
+  });
+</script>
+</body>
+</html>

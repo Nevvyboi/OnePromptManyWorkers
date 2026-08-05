@@ -1,0 +1,17 @@
+# Java / Maven
+**/target/
+*.class
+
+# Node
+**/node_modules/
+
+# Temp exports and renders
+*.pdf
+_shots/
+*.log
+
+# OS / editor
+.DS_Store
+.idea/
+*.iml
+.vscode/
