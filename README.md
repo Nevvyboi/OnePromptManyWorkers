@@ -81,7 +81,9 @@ Then open **`/stage`** on the projector, **`/control`** on your laptop, and show
 cd live-build/mock && PORT=5099 node server.js
 ```
 
-Full setup, hotspot notes, and the fallback plan live in [live-build/README.md](live-build/README.md).
+Full setup, hotspot notes, limits, and the fallback plan live in
+[live-build/README.md](live-build/README.md). To test the whole talk end to end
+before the day, follow [REHEARSAL.md](REHEARSAL.md).
 
 ---
 

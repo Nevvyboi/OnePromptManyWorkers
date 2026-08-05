@@ -1,5 +1,6 @@
 package com.bbd.live;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -26,7 +27,14 @@ public class ApiController {
     public Map<String, Object> queue() { return crew.queuePayload(); }
 
     @PostMapping("/submit")
-    public Map<String, Object> submit(@RequestBody SubmitReq req) { return crew.submit(req.text(), req.name()); }
+    public Map<String, Object> submit(@RequestBody SubmitReq req, HttpServletRequest http) {
+        return crew.submit(req.text(), req.name(), clientIp(http));
+    }
+
+    private static String clientIp(HttpServletRequest r) {
+        String fwd = r.getHeader("X-Forwarded-For");
+        return (fwd != null && !fwd.isBlank()) ? fwd.split(",")[0].trim() : r.getRemoteAddr();
+    }
 
     @PostMapping("/run/{id}")
     public Map<String, Object> run(@PathVariable String id) { return crew.run(id); }

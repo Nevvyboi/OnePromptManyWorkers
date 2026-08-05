@@ -34,6 +34,15 @@ public class CrewService {
     private final ExecutorService runner = Executors.newSingleThreadExecutor();
     private volatile boolean running = false;
 
+    // limits so a live crowd can't flood or embarrass the queue
+    private static final int MAX_QUEUE = 250;      // total ideas kept
+    private static final int MAX_PER_IP = 8;       // ideas per phone
+    private static final long COOLDOWN_MS = 6000;  // wait between submits per phone
+    private final Map<String, long[]> ipState = new ConcurrentHashMap<>(); // ip -> [lastMs, count]
+    private static final Set<String> BLOCK = Set.of(
+            "fuck", "shit", "cunt", "bitch", "bastard", "asshole", "dick",
+            "nigger", "faggot", "retard", "rape"); // light filter; you also curate what runs
+
     // lazily built on the first live run
     private Agents.Copywriter copywriter;
     private Agents.Designer designer;
@@ -41,15 +50,34 @@ public class CrewService {
 
     // ---------- audience + presenter API ----------
 
-    public Map<String, Object> submit(String text, String name) {
+    public Map<String, Object> submit(String text, String name, String ip) {
         String t = text == null ? "" : text.strip();
-        if (t.length() < 3) return Map.of("ok", false, "error", "Give it a few more words.");
+        if (t.length() < 3) return err("Give it a few more words.");
         if (t.length() > 120) t = t.substring(0, 120);
+        if (isBlocked(t)) return err("Let's keep it friendly.");
+        if (queue.size() >= MAX_QUEUE) return err("The queue is full for now. Thanks!");
+        for (Idea i : queue) if (i.text.equalsIgnoreCase(t)) return err("Someone already sent that one.");
+
+        long now = System.currentTimeMillis();
+        long[] st = ipState.computeIfAbsent(ip == null ? "?" : ip, k -> new long[]{0, 0});
+        synchronized (st) {
+            if (now - st[0] < COOLDOWN_MS) return err("One at a time. Give it a few seconds.");
+            if (st[1] >= MAX_PER_IP) return err("That's plenty from you. Let others have a go.");
+            st[0] = now; st[1]++;
+        }
+
         Idea idea = new Idea(String.valueOf(nextId.getAndIncrement()), t, name == null ? "" : name.strip());
         queue.add(idea);
         broadcast("queue", queuePayload());
         broadcast("tally", Map.of("total", queue.size()));
         return Map.of("ok", true, "position", queue.size(), "mock", mock);
+    }
+
+    private Map<String, Object> err(String message) { return Map.of("ok", false, "error", message); }
+
+    private boolean isBlocked(String text) {
+        for (String w : text.toLowerCase().split("[^a-z]+")) if (BLOCK.contains(w)) return true;
+        return false;
     }
 
     public Map<String, Object> queuePayload() {

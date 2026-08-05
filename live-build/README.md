@@ -58,6 +58,26 @@ Each agent has a house fallback, so a single bad response never breaks the build
 If Ollama is down entirely, flip to mock mode (above) and the show goes on. You can
 even say it: "small local models improvise, so I gave the crew a safety net."
 
+## Limits and moderation
+
+Submissions land in a queue that only you see on `/control`. A landing page is built
+only when you click **Run** on one you pick, one at a time. Nobody's idea reaches the
+projector unless you choose it, so you are the final filter.
+
+On top of that, the server guards itself so a live crowd can't flood or embarrass it:
+
+| Guard | Value | Message when hit |
+|---|---|---|
+| Queue cap | 250 ideas total | "The queue is full for now." |
+| Per phone | 8 ideas max | "That's plenty from you." |
+| Cooldown | 6 seconds between submits | "One at a time." |
+| Duplicates | rejected (case-insensitive) | "Someone already sent that one." |
+| Length | 3 to 120 characters | "Give it a few more words." |
+| Profanity | small word filter | "Let's keep it friendly." |
+
+Tune the numbers at the top of `CrewService.java`. Even with all of this, one idea
+building at a time and your own curation are the real safety.
+
 ## No Java handy? Preview the whole thing in Node
 
 Same frontend, same protocol, canned crew, zero Java or Ollama:
