@@ -232,6 +232,13 @@ Good agent design is good constraint design.
 | [Ollama](https://ollama.com) + `qwen2.5:3b` | the live agents | optional: both Java demos have a mock/fallback mode |
 | Node 18+ | the `live-build/mock` preview and the deck generator | optional |
 
+On macOS the whole toolchain is one line:
+`brew install openjdk@21 maven ollama && brew services start ollama`
+
+Measured on an M-series Mac with 32GB: a full eight-agent build on `qwen2.5:7b`
+takes **11.6 to 14 seconds**, and a background build on `qwen2.5:3b` about
+**5 seconds**.
+
 ---
 
 ## License

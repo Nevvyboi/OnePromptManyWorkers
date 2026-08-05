@@ -1,6 +1,6 @@
 package com.bbd.live;
 
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
 import dev.langchain4j.service.AiServices;
 import org.springframework.beans.factory.annotation.Value;
@@ -361,7 +361,7 @@ public class CrewService {
     // ---------- agents with fallbacks ----------
 
     private Bundle build(String which) {
-        ChatLanguageModel model = OllamaChatModel.builder()
+        ChatModel model = OllamaChatModel.builder()
                 .baseUrl(ollamaUrl).modelName(which)
                 .temperature(0.6).timeout(Duration.ofMinutes(2)).build();
         Bundle b = new Bundle();

@@ -86,22 +86,33 @@ laptop; the data plan only creates the network.
 > The `/control` and `/join` pages show the exact QR and URL, auto-detected from whatever
 > network you are on. No editing needed.
 
+**1a. The toolchain**, if you do not have it (macOS):
+```bash
+brew install openjdk@21 maven ollama
+brew services start ollama
+export JAVA_HOME=/opt/homebrew/opt/openjdk@21
+export PATH="$JAVA_HOME/bin:$PATH"
+```
+
 **2. The models (for the real thing).** Two, on purpose: the stage crew gets the
 better model because the room is watching, and the background queue gets a
 smaller one so it can never slow your live run down.
 
 ```bash
-ollama pull qwen2.5:3b     # the stage crew
-ollama pull qwen2.5:1.5b   # the background queue
-ollama run qwen2.5:3b "hi" # warm the big one
+ollama pull qwen2.5:7b     # the stage crew
+ollama pull qwen2.5:3b     # the background queue
+ollama run qwen2.5:7b "hi" # warm the big one
 ```
+
+On a 32GB Apple Silicon machine `qwen2.5:7b` is the sweet spot for the stage:
+noticeably better names and copy than 3b, and still fast enough to watch.
 
 Both are configurable:
 
 ```
-live.model=qwen2.5:3b              # what the projector sees
-live.backgroundModel=qwen2.5:1.5b  # what fills the gallery while you talk
-live.background=false              # or turn background building off entirely
+live.model=qwen2.5:7b            # what the projector sees
+live.backgroundModel=qwen2.5:3b  # what fills the gallery while you talk
+live.background=false            # or turn background building off entirely
 ```
 
 Background builds also pause completely while a stage run is in flight, so the
@@ -156,6 +167,21 @@ consent travels with the submission, so nothing has to be scrubbed later.
 > It ships ticked by default, because the credit is half the fun and the box is
 > right there under the name field. If you would rather it be off by default,
 > flip `checked` on `#showName` in `static/index.html`.
+
+## Measured on real hardware
+
+Not estimates. M-series Mac, 32GB, `qwen2.5:7b` on stage and `qwen2.5:3b` behind:
+
+| | time |
+|---|---|
+| A full stage build, 8 agents | **11.6 to 14.0 s** |
+| A background build on the small model | **~5.2 s** |
+| Slowest agent (Copywriter, longest prompt) | ~5.7 s |
+| Server start | under 1 s |
+
+So a room of 30 ideas fills the gallery in roughly three minutes of background
+work, comfortably inside a talk, and a live run is a watchable ten to fifteen
+seconds.
 
 ## Timing
 
