@@ -7,6 +7,35 @@ projector. Every token runs on your laptop through Ollama. Nothing leaves the ro
 It literally performs the talk's title: one prompt (their idea) becomes many
 workers (Copywriter, Designer, Builder, Skeptic) that build one thing on stage.
 
+## The spider net
+
+The crew is not a pipeline, it is a web. Agents run in parallel, and when one
+finishes it helps another. The stage draws this live as a graph whose edges pulse
+as work flows across them.
+
+```
+              [ copy ]
+             ^    \    ^........
+   tone hint/      \copy        . critique
+           /        v           .  (feedback)
+     [ design ]---->[ build ]   .
+           palette      \       .
+                         v      .
+                      [ skeptic ]
+```
+
+1. **Copywriter and Designer start together** (round one is parallel).
+2. The Designer's job is smaller so it lands first, and instead of idling it
+   **assists**: it sends the Copywriter a tone hint.
+3. Both outputs flow into the **Builder**, which assembles the page.
+4. The Builder hands the page to the **Skeptic**.
+5. The Skeptic's critique **loops back** to the Copywriter, who revises the
+   headline live. You watch the hero text change on the projector, with a
+   "revised after the skeptic's critique" tag.
+
+That last edge is the point: output from one agent becoming input to another,
+including going backwards. A net, not a line.
+
 ## The three views
 
 | URL | Who | What |

@@ -2,6 +2,7 @@ package com.bbd.live;
 
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
+import dev.langchain4j.service.V;
 
 /**
  * The crew, as LangChain4j AI Services. No implementations, the annotations are
@@ -20,6 +21,16 @@ public final class Agents {
             """)
         @UserMessage("Product idea: {{it}}")
         Model.Copy write(String idea);
+
+        // The net closes here: the copywriter takes the skeptic's critique and
+        // revises its own earlier work. Agent output feeding another agent.
+        @SystemMessage("""
+            You are a punchy startup copywriter revising your own headline after honest
+            feedback. Write ONE sharper headline, at most 8 words, that quietly answers
+            the critique. Reply with just the new headline, nothing else. No quotes.
+            """)
+        @UserMessage("Product idea: {{idea}}\nCurrent headline: {{headline}}\nThe critique: {{critique}}")
+        String revise(@V("idea") String idea, @V("headline") String headline, @V("critique") String critique);
     }
 
     /** Picks a single visual vibe word. We map it to a real palette in Java. */

@@ -36,7 +36,7 @@ mvn spring-boot:run -Dspring-boot.run.arguments=--live.mock=true
 - [ ] Open `http://localhost:8080/stage` in a second window. It says "Ready for your idea".
 - [ ] Open `http://localhost:8080/` (audience). Type an idea, Send. You see "You're in."
 - [ ] The idea appears in `/control`.
-- [ ] Click **Run**. On `/stage`: the crew lights up in order, the page builds section by section, then recolours when the Designer finishes, then the Skeptic line appears.
+- [ ] Click **Run**. On `/stage`: the web graph appears, Copywriter and Designer spin together, the Designer finishes first and assists (edge pulse), the page recolours, the hero lands, the Skeptic critiques, and then the headline visibly REVISES with a "revised after the skeptic's critique" tag. That revision is the money moment; make sure you see it.
 - [ ] Click **Run a built-in demo idea**. It builds the plant-watering example.
 
 Pass when: submit -> appears in control -> Run -> a full landing page builds on stage.

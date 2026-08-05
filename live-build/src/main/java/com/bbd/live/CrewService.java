@@ -109,40 +109,80 @@ public class CrewService {
         return em;
     }
 
-    // ---------- the run ----------
+    // ---------- the run: a spider net, not a line ----------
+    //
+    // Copywriter and Designer start together. Whichever finishes first assists
+    // the other (in practice the Designer's one-word vibe lands first, so it
+    // hands the Copywriter a tone hint). Both feed the Builder. The Builder
+    // feeds the Skeptic. And the Skeptic's critique loops BACK to the
+    // Copywriter, who revises the headline live. That feedback edge is what
+    // makes it a net.
 
-    private void runCrew(Idea idea) throws InterruptedException {
+    private final ExecutorService pool = Executors.newFixedThreadPool(2);
+
+    private void runCrew(Idea idea) throws Exception {
         broadcast("run-start", Map.of("id", idea.id, "idea", idea.text, "name", idea.name));
         sleep(450);
-        broadcast("crew", Map.of("workers", List.of(
-                worker("copywriter", "Copywriter"),
-                worker("designer", "Designer"),
-                worker("builder", "Builder"),
-                worker("skeptic", "Skeptic"))));
-        sleep(300);
+        broadcast("graph", Map.of(
+                "nodes", List.of(
+                        node("copywriter", "copy"), node("designer", "design"),
+                        node("builder", "build"), node("skeptic", "skeptic")),
+                "edges", List.of(
+                        edge("designer", "copywriter", false),
+                        edge("copywriter", "builder", false),
+                        edge("designer", "builder", false),
+                        edge("builder", "skeptic", false),
+                        edge("skeptic", "copywriter", true))));
+        sleep(400);
 
-        broadcast("worker-start", Map.of("key", "copywriter", "note", "writing the hero…"));
-        Copy copy = safeCopy(idea.text);
-        broadcast("worker-done", Map.of("key", "copywriter", "payload", copy, "summary", "\"" + copy.headline() + "\""));
+        // round 1: two agents in parallel
+        broadcast("agent-state", Map.of("key", "copywriter", "state", "working", "note", "drafting the hero…"));
+        broadcast("agent-state", Map.of("key", "designer", "state", "working", "note", "choosing a palette…"));
+        Future<Copy> copyF = pool.submit(() -> safeCopy(idea.text));
+        Future<Palette> paletteF = pool.submit(() -> safePalette(idea.text));
 
-        broadcast("worker-start", Map.of("key", "designer", "note", "choosing a palette…"));
-        Palette palette = safePalette(idea.text);
-        broadcast("worker-done", Map.of("key", "designer", "payload", palette, "summary", "palette + type set"));
+        // the designer's little job lands first; it applies, then assists
+        Palette palette = paletteF.get();
+        broadcast("worker-done", Map.of("key", "designer", "payload", palette));
+        broadcast("agent-state", Map.of("key", "designer", "state", "assisting", "note", "done early, so it helps: sends the copywriter a tone hint"));
+        broadcast("flow", Map.of("from", "designer", "to", "copywriter", "what", "tone hint"));
+        sleep(600);
+        broadcast("agent-state", Map.of("key", "designer", "state", "done"));
 
-        broadcast("worker-start", Map.of("key", "builder", "note", "assembling the page…"));
-        sleep(700);
-        broadcast("worker-done", Map.of("key", "builder", "summary", "page assembled, 3 sections"));
+        Copy copy = copyF.get();
+        broadcast("worker-done", Map.of("key", "copywriter", "payload", copy));
+        broadcast("agent-state", Map.of("key", "copywriter", "state", "done", "note", "hero: \"" + copy.headline() + "\""));
+        broadcast("flow", Map.of("from", "copywriter", "to", "builder", "what", "copy"));
+        broadcast("flow", Map.of("from", "designer", "to", "builder", "what", "palette"));
 
-        broadcast("worker-start", Map.of("key", "skeptic", "note", "poking holes…"));
+        broadcast("agent-state", Map.of("key", "builder", "state", "working", "note", "assembling the page…"));
+        sleep(800);
+        broadcast("worker-done", Map.of("key", "builder"));
+        broadcast("agent-state", Map.of("key", "builder", "state", "done", "note", "page assembled, 3 sections"));
+
+        broadcast("flow", Map.of("from", "builder", "to", "skeptic", "what", "the page"));
+        broadcast("agent-state", Map.of("key", "skeptic", "state", "working", "note", "poking holes…"));
         String note = safeSkeptic(idea.text);
-        broadcast("worker-done", Map.of("key", "skeptic", "payload", Map.of("note", note), "summary", "one honest risk"));
+        broadcast("worker-done", Map.of("key", "skeptic", "payload", Map.of("note", note)));
+        broadcast("agent-state", Map.of("key", "skeptic", "state", "done"));
+
+        // the net closes: critique flows back, the copywriter revises live
+        broadcast("flow", Map.of("from", "skeptic", "to", "copywriter", "what", "critique"));
+        broadcast("agent-state", Map.of("key", "copywriter", "state", "working", "note", "takes the critique, revising the hero…"));
+        String revised = safeRevise(idea.text, copy.headline(), note);
+        broadcast("revise", Map.of("field", "headline", "value", revised, "by", "copywriter"));
+        broadcast("flow", Map.of("from", "copywriter", "to", "builder", "what", "revised hero"));
+        broadcast("agent-state", Map.of("key", "copywriter", "state", "done", "note", "headline revised. the web is settled"));
 
         idea.status = "done";
         broadcast("run-done", Map.of("id", idea.id));
         broadcast("queue", queuePayload());
     }
 
-    private Map<String, String> worker(String key, String label) { return Map.of("key", key, "label", label); }
+    private Map<String, String> node(String key, String label) { return Map.of("key", key, "label", label); }
+    private Map<String, Object> edge(String from, String to, boolean feedback) {
+        return feedback ? Map.of("from", from, "to", to, "feedback", true) : Map.of("from", from, "to", to);
+    }
 
     // ---------- agents with fallbacks ----------
 
@@ -172,6 +212,28 @@ public class CrewService {
             catch (RuntimeException e) { vibe = null; }
         } else { sleep(1200); vibe = null; }
         return paletteFor(vibe, idea);
+    }
+
+    private String safeRevise(String idea, String headline, String critique) throws InterruptedException {
+        if (!mock) {
+            try {
+                ensureAgents();
+                String s = copywriter.revise(idea, headline, critique);
+                if (s != null && !s.isBlank()) return s.strip().replaceAll("^\"|\"$", "");
+            } catch (RuntimeException e) { System.out.println("  (revision improvised, using the house rewrite)"); }
+        } else sleep(1200);
+        return cannedRevise(idea);
+    }
+
+    private String cannedRevise(String idea) {
+        String s = idea.strip().replaceAll("[.\\s]+$", "").replaceFirst("(?i)^an?\\s+", "");
+        String cap = s.substring(0, 1).toUpperCase() + s.substring(1);
+        String[] options = {
+                cap + ". Zero effort, zero guilt.",
+                "Set it up once. Never think about it again.",
+                cap + ", minus the guesswork.",
+                "The lazy way to " + s + ". On purpose."};
+        return pick(options, idea + "rev");
     }
 
     private String safeSkeptic(String idea) throws InterruptedException {

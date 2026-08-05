@@ -74,37 +74,82 @@ const skepticNote = idea => {
   ]);
 };
 
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+function reviseHeadline(idea) {
+  const s = idea.trim().replace(/[.\s]+$/, "").replace(/^an?\s+/i, "");
+  return rnd([
+    `${cap(s)}. Zero effort, zero guilt.`,
+    `Set it up once. Never think about it again.`,
+    `${cap(s)}, minus the guesswork.`,
+    `The lazy way to ${s}. On purpose.`,
+  ]);
+}
+
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+// The spider net: agents work in parallel, and when one finishes it helps
+// another. The Skeptic's critique loops BACK to the Copywriter, who revises
+// the headline live. That feedback edge is what makes it a net, not a line.
 async function runCrew(idea, name) {
   running = idea && idea.id;
   broadcast("run-start", { id: running, idea: idea.text, name });
-  await sleep(500);
-  broadcast("crew", { workers: [
-    { key: "copywriter", label: "Copywriter" },
-    { key: "designer", label: "Designer" },
-    { key: "builder", label: "Builder" },
-    { key: "skeptic", label: "Skeptic" },
-  ]});
-  await sleep(300);
+  await sleep(450);
+  broadcast("graph", {
+    nodes: [
+      { key: "copywriter", label: "copy" },
+      { key: "designer", label: "design" },
+      { key: "builder", label: "build" },
+      { key: "skeptic", label: "skeptic" },
+    ],
+    edges: [
+      { from: "designer", to: "copywriter" },
+      { from: "copywriter", to: "builder" },
+      { from: "designer", to: "builder" },
+      { from: "builder", to: "skeptic" },
+      { from: "skeptic", to: "copywriter", feedback: true },
+    ],
+  });
+  await sleep(400);
 
-  broadcast("worker-start", { key: "copywriter", note: "writing the hero…" });
-  await sleep(1500);
-  const copy = makeCopy(idea.text);
-  broadcast("worker-done", { key: "copywriter", payload: copy, summary: `"${copy.headline}"` });
-
-  broadcast("worker-start", { key: "designer", note: "choosing a palette…" });
+  // round 1: copywriter and designer start together
+  broadcast("agent-state", { key: "copywriter", state: "working", note: "drafting the hero…" });
+  broadcast("agent-state", { key: "designer", state: "working", note: "choosing a palette…" });
   await sleep(1300);
+
+  // designer lands first, applies the palette, then helps the copywriter
   const design = PALETTES[paletteIdx++ % PALETTES.length];
-  broadcast("worker-done", { key: "designer", payload: design, summary: `palette + type set` });
-
-  broadcast("worker-start", { key: "builder", note: "assembling the page…" });
-  await sleep(900);
-  broadcast("worker-done", { key: "builder", summary: "page assembled, 3 sections" });
-
-  broadcast("worker-start", { key: "skeptic", note: "poking holes…" });
+  broadcast("worker-done", { key: "designer", payload: design });
+  broadcast("agent-state", { key: "designer", state: "assisting", note: "done early, so it helps: sends the copywriter a tone hint" });
+  broadcast("flow", { from: "designer", to: "copywriter", what: "tone hint" });
   await sleep(1000);
-  broadcast("worker-done", { key: "skeptic", payload: { note: skepticNote(idea.text) }, summary: "one honest risk" });
+  broadcast("agent-state", { key: "designer", state: "done" });
+
+  // copywriter lands, feeds the builder (and so does the designer's palette)
+  const copy = makeCopy(idea.text);
+  broadcast("worker-done", { key: "copywriter", payload: copy });
+  broadcast("agent-state", { key: "copywriter", state: "done", note: `hero: "${copy.headline}"` });
+  broadcast("flow", { from: "copywriter", to: "builder", what: "copy" });
+  broadcast("flow", { from: "designer", to: "builder", what: "palette" });
+  broadcast("agent-state", { key: "builder", state: "working", note: "assembling the page…" });
+  await sleep(900);
+  broadcast("worker-done", { key: "builder" });
+  broadcast("agent-state", { key: "builder", state: "done", note: "page assembled, 3 sections" });
+
+  // builder hands the page to the skeptic
+  broadcast("flow", { from: "builder", to: "skeptic", what: "the page" });
+  broadcast("agent-state", { key: "skeptic", state: "working", note: "poking holes…" });
+  await sleep(1100);
+  const note = skepticNote(idea.text);
+  broadcast("worker-done", { key: "skeptic", payload: { note } });
+  broadcast("agent-state", { key: "skeptic", state: "done" });
+
+  // the net closes: critique flows back, the copywriter revises live
+  broadcast("flow", { from: "skeptic", to: "copywriter", what: "critique" });
+  broadcast("agent-state", { key: "copywriter", state: "working", note: "takes the critique, revising the hero…" });
+  await sleep(1300);
+  broadcast("revise", { field: "headline", value: reviseHeadline(idea.text), by: "copywriter" });
+  broadcast("flow", { from: "copywriter", to: "builder", what: "revised hero" });
+  broadcast("agent-state", { key: "copywriter", state: "done", note: "headline revised. the web is settled" });
 
   if (idea.mark) idea.mark.status = "done";
   running = null;

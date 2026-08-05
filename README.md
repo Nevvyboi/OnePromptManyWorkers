@@ -38,8 +38,11 @@ projector. Every token runs on a laptop through Ollama. Nothing leaves the room.
 ## The Live Build
 
 The star of the talk. It performs the title live: one prompt (an audience member's
-idea) becomes many workers (Copywriter, Designer, Builder, Skeptic) that build one
-thing on stage, a real landing page, section by section.
+idea) becomes many workers (Copywriter, Designer, Builder, Skeptic) that build a
+real landing page on stage. And the crew is a **spider net**, not a pipeline:
+agents run in parallel, the one that finishes first assists another, and the
+Skeptic's critique loops back so the Copywriter revises the headline live on the
+projector.
 
 <table>
   <tr>
@@ -48,7 +51,7 @@ thing on stage, a real landing page, section by section.
   </tr>
   <tr>
     <td><img src="assets/live-join.png" alt="Full-screen join QR"><br><sub><b>Join</b> a full-screen QR for the projector.</sub></td>
-    <td><img src="assets/live-stage.png" alt="Stage building a landing page"><br><sub><b>Stage</b> the crew works, the page builds and recolours live.</sub></td>
+    <td><img src="assets/live-stage-web.png" alt="The web mid-run, agents assisting each other"><br><sub><b>Stage</b> the web mid-run: edges pulse as agents help each other.</sub></td>
   </tr>
 </table>
 
