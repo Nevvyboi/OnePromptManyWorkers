@@ -37,6 +37,9 @@
   .flag{display:inline-block;margin-left:.6rem;font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--rose);border:1px solid var(--rose);border-radius:11px;padding:.1rem .5rem;vertical-align:middle}
   .item button:disabled{background:#2a3040;color:var(--faint);cursor:default}
   .running{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)}
+  .gate{margin-top:14px;width:100%;border:none;border-radius:10px;padding:13px;cursor:pointer;
+        font-family:var(--sans);font-weight:700;font-size:.95rem;background:var(--teal);color:#06201c}
+  .gate.closed{background:var(--rose);color:#2a0710}
   .demo{margin-top:14px;background:none;border:1px dashed var(--line);color:var(--muted);border-radius:10px;padding:11px;width:100%;cursor:pointer;font-family:var(--mono);font-size:.8rem}
   .status{font-family:var(--mono);font-size:.78rem;color:var(--teal);margin-top:12px;min-height:1.1rem}
 </style>
@@ -54,6 +57,7 @@
           <a href="/" target="_blank">Audience view ↗</a>
         </div>
       </div>
+      <button class="gate" id="gate">Close submissions</button>
       <button class="demo" id="demo">▶ Run a built-in demo idea</button>
       <div class="status" id="status"></div>
     </div>
@@ -109,10 +113,25 @@
   }
   document.getElementById("demo").onclick = () => run("demo");
 
+  // the doors: open at the start of the talk, closed before the reveal
+  let gateOpen = true;
+  function paintGate(){
+    const b = document.getElementById("gate");
+    b.textContent = gateOpen ? "Close submissions" : "Open submissions";
+    b.classList.toggle("closed", !gateOpen);
+  }
+  document.getElementById("gate").onclick = async () => {
+    const next = !gateOpen;
+    const r = await fetch("/api/gate?key=" + encodeURIComponent(KEY) + "&open=" + next, { method: "POST" });
+    if (r.ok){ gateOpen = next; paintGate(); }
+  };
+  fetch("/api/info").then(r=>r.json()).then(d=>{ if (d.open !== undefined){ gateOpen = d.open; paintGate(); } });
+
   function refreshQueue(){ fetch("/api/queue?key="+encodeURIComponent(KEY)).then(r=>r.json()).then(d=>render(d.ideas)).catch(()=>{}); }
 
   const es = new EventSource("/api/events");
   es.addEventListener("queue", e => render(JSON.parse(e.data).ideas));
+  es.addEventListener("gate", e => { gateOpen = JSON.parse(e.data).open; paintGate(); });
   es.addEventListener("run-start", e => { running = JSON.parse(e.data).id; document.querySelectorAll(".item button").forEach(b=>b.disabled=true); });
   es.addEventListener("run-done", e => { running=null; document.getElementById("status").textContent="Done. Pick the next one."; refreshQueue(); });
   refreshQueue();

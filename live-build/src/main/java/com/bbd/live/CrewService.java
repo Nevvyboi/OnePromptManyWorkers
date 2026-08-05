@@ -41,6 +41,7 @@ public class CrewService {
     private final AtomicInteger nextId = new AtomicInteger(1);
     private final ExecutorService runner = Executors.newSingleThreadExecutor();
     private volatile boolean running = false;
+    private volatile boolean submissionsOpen = true;   // you open and close these from /control
 
     // limits so a live crowd can't flood or embarrass the queue
     private static final int MAX_QUEUE = 250;      // total ideas kept
@@ -69,7 +70,18 @@ public class CrewService {
 
     // ---------- audience + presenter API ----------
 
-    public Map<String, Object> submit(String text, String name, String ip) {
+    /** Open or close the doors. Presenter only. */
+    public Map<String, Object> gate(boolean open) {
+        submissionsOpen = open;
+        broadcast("gate", Map.of("open", open));
+        broadcast("queue", queuePayload());
+        return Map.of("ok", true, "open", open);
+    }
+    public boolean submissionsOpen() { return submissionsOpen; }
+
+    public Map<String, Object> submit(String text, String name, boolean showName, String ip) {
+        if (!submissionsOpen)
+            return Map.of("ok", false, "closed", true, "error", "Submissions are closed. Watch the big screen.");
         String t = clip(text == null ? "" : text.strip());
         if (t.length() < 3) return err("Give it a few more words.");
         if (isBlocked(t)) return err("Let's keep it friendly.");
@@ -90,6 +102,7 @@ public class CrewService {
 
         Idea idea = new Idea(String.valueOf(nextId.getAndIncrement()), t, name == null ? "" : name.strip());
         idea.flagged = isCrude(t);
+        idea.showName = showName;
         queue.add(idea);
         broadcast("queue", queuePayload());
         broadcast("tally", Map.of("total", queue.size()));
@@ -132,9 +145,10 @@ public class CrewService {
         List<Map<String, Object>> ideas = new ArrayList<>();
         for (Idea i : queue) {
             if (i.hidden) continue;
-            ideas.add(Map.of("id", i.id, "text", i.text, "name", i.name, "status", i.status, "flagged", i.flagged));
+            ideas.add(Map.of("id", i.id, "text", i.text, "name", i.shownName(),
+                    "status", i.status, "flagged", i.flagged, "ms", i.ms));
         }
-        return Map.of("ideas", ideas);
+        return Map.of("open", submissionsOpen, "ideas", ideas);
     }
 
     public Map<String, Object> run(String id) {
@@ -158,6 +172,7 @@ public class CrewService {
         send(em, "info", Map.of("mock", mock, "tally", queue.size()));
         send(em, "queue", queuePayload());
         send(em, "gallery", galleryPayload());
+        send(em, "gate", Map.of("open", submissionsOpen));
         return em;
     }
 
@@ -183,7 +198,16 @@ public class CrewService {
             Map.of("key", "reviewer", "label", "review"),
             Map.of("key", "skeptic", "label", "skeptic"));
 
+    private final Map<String, Long> marks = new ConcurrentHashMap<>();
+    private void startAgent(String k) { marks.put(k, System.currentTimeMillis()); }
+    private void doneAgent(String k) {
+        long ms = System.currentTimeMillis() - marks.getOrDefault(k, System.currentTimeMillis());
+        broadcast("timing", Map.of("key", k, "ms", ms));
+    }
+
     private void runCrew(Idea idea) throws Exception {
+        long t0 = System.currentTimeMillis();
+        marks.clear();
         broadcast("run-start", Map.of("id", idea.id, "idea", idea.text, "name", idea.name));
         sleep(420);
         broadcast("graph", Map.of("nodes", CREW, "edges", List.of(
@@ -203,9 +227,9 @@ public class CrewService {
         sleep(380);
 
         // round one: three agents at once
-        broadcast("agent-state", Map.of("key", "namer", "state", "working", "note", "inventing a name…"));
-        broadcast("agent-state", Map.of("key", "designer", "state", "working", "note", "choosing a palette…"));
-        broadcast("agent-state", Map.of("key", "copywriter", "state", "working", "note", "drafting the hero…"));
+        startAgent("namer"); broadcast("agent-state", Map.of("key", "namer", "state", "working", "note", "inventing a name…"));
+        startAgent("designer"); broadcast("agent-state", Map.of("key", "designer", "state", "working", "note", "choosing a palette…"));
+        startAgent("copywriter"); broadcast("agent-state", Map.of("key", "copywriter", "state", "working", "note", "drafting the hero…"));
         Future<String> nameF = pool.submit(() -> safeName(stage(), idea.text));
         Future<Palette> paletteF = pool.submit(() -> safePalette(stage(), idea.text));
         Future<Copy> copyF = pool.submit(() -> safeCopy(stage(), idea.text));
@@ -213,74 +237,76 @@ public class CrewService {
         // the namer is the smallest job, so it lands first and helps two others
         Product product = new Product(nameF.get(), "");
         broadcast("worker-done", Map.of("key", "namer", "payload", product));
-        broadcast("agent-state", Map.of("key", "namer", "state", "assisting", "note", "done first, so it helps"));
+        doneAgent("namer"); broadcast("agent-state", Map.of("key", "namer", "state", "assisting", "note", "done first, so it helps"));
         broadcast("flow", Map.of("from", "namer", "to", "copywriter", "what", "the name"));
         broadcast("flow", Map.of("from", "namer", "to", "illustrator", "what", "the name"));
         broadcast("flow", Map.of("from", "namer", "to", "pricer", "what", "the name"));
         sleep(500);
-        broadcast("agent-state", Map.of("key", "namer", "state", "done"));
+        doneAgent("namer"); broadcast("agent-state", Map.of("key", "namer", "state", "done"));
 
         Palette palette = paletteF.get();
         broadcast("worker-done", Map.of("key", "designer", "payload", palette));
-        broadcast("agent-state", Map.of("key", "designer", "state", "assisting", "note", "hands the illustrator its colours"));
+        doneAgent("designer"); broadcast("agent-state", Map.of("key", "designer", "state", "assisting", "note", "hands the illustrator its colours"));
         broadcast("flow", Map.of("from", "designer", "to", "copywriter", "what", "tone hint"));
         broadcast("flow", Map.of("from", "designer", "to", "illustrator", "what", "palette"));
         sleep(500);
-        broadcast("agent-state", Map.of("key", "designer", "state", "done"));
+        doneAgent("designer"); broadcast("agent-state", Map.of("key", "designer", "state", "done"));
 
         // the illustrator could only start once it had a name and colours
-        broadcast("agent-state", Map.of("key", "illustrator", "state", "working", "note", "drawing the hero artwork…"));
+        startAgent("illustrator"); broadcast("agent-state", Map.of("key", "illustrator", "state", "working", "note", "drawing the hero artwork…"));
         Art art = safeArt(stage(), idea.text, palette);
         broadcast("worker-done", Map.of("key", "illustrator", "payload", art));
-        broadcast("agent-state", Map.of("key", "illustrator", "state", "done", "note", "artwork ready"));
+        doneAgent("illustrator"); broadcast("agent-state", Map.of("key", "illustrator", "state", "done", "note", "artwork ready"));
         broadcast("flow", Map.of("from", "illustrator", "to", "builder", "what", "artwork"));
 
-        broadcast("agent-state", Map.of("key", "pricer", "state", "working", "note", "working out three tiers…"));
+        startAgent("pricer"); broadcast("agent-state", Map.of("key", "pricer", "state", "working", "note", "working out three tiers…"));
         List<Tier> pricingLive = safePricing(stage(), idea.text, product.name());
         broadcast("worker-done", Map.of("key", "pricer", "payload", Map.of("pricing", pricingLive)));
-        broadcast("agent-state", Map.of("key", "pricer", "state", "done", "note", "three tiers, one featured"));
+        doneAgent("pricer"); broadcast("agent-state", Map.of("key", "pricer", "state", "done", "note", "three tiers, one featured"));
         broadcast("flow", Map.of("from", "pricer", "to", "builder", "what", "pricing"));
 
         Copy copy = copyF.get();
         broadcast("worker-done", Map.of("key", "copywriter", "payload", copy));
-        broadcast("agent-state", Map.of("key", "copywriter", "state", "done", "note", "hero: \"" + copy.headline() + "\""));
+        doneAgent("copywriter"); broadcast("agent-state", Map.of("key", "copywriter", "state", "done", "note", "hero: \"" + copy.headline() + "\""));
         broadcast("flow", Map.of("from", "copywriter", "to", "builder", "what", "copy"));
         broadcast("flow", Map.of("from", "designer", "to", "builder", "what", "palette"));
 
-        broadcast("agent-state", Map.of("key", "builder", "state", "working", "note", "assembling the page…"));
+        startAgent("builder"); broadcast("agent-state", Map.of("key", "builder", "state", "working", "note", "assembling the page…"));
         sleep(800);
         broadcast("worker-done", Map.of("key", "builder"));
-        broadcast("agent-state", Map.of("key", "builder", "state", "done", "note", "page assembled"));
+        doneAgent("builder"); broadcast("agent-state", Map.of("key", "builder", "state", "done", "note", "page assembled"));
 
         // two checkers read the finished page together
         broadcast("flow", Map.of("from", "builder", "to", "reviewer", "what", "the page"));
         broadcast("flow", Map.of("from", "builder", "to", "skeptic", "what", "the page"));
-        broadcast("agent-state", Map.of("key", "reviewer", "state", "working", "note", "checking it over…"));
-        broadcast("agent-state", Map.of("key", "skeptic", "state", "working", "note", "poking holes…"));
+        startAgent("reviewer"); broadcast("agent-state", Map.of("key", "reviewer", "state", "working", "note", "checking it over…"));
+        startAgent("skeptic"); broadcast("agent-state", Map.of("key", "skeptic", "state", "working", "note", "poking holes…"));
         Future<String> polishF = pool.submit(() -> safePolish(stage(), idea.text, copy.cta()));
         String note = safeSkeptic(stage(), idea.text);
 
         String polished = polishF.get();
         Review review = new Review("one thing to sharpen", "cta", polished, "the call to action was generic");
         broadcast("worker-done", Map.of("key", "reviewer", "payload", review));
-        broadcast("agent-state", Map.of("key", "reviewer", "state", "done", "note", review.note()));
+        doneAgent("reviewer"); broadcast("agent-state", Map.of("key", "reviewer", "state", "done", "note", review.note()));
         broadcast("flow", Map.of("from", "reviewer", "to", "copywriter", "what", "polish the cta"));
-        broadcast("agent-state", Map.of("key", "copywriter", "state", "working", "note", "taking the reviewer's note…"));
+        startAgent("copywriter"); broadcast("agent-state", Map.of("key", "copywriter", "state", "working", "note", "taking the reviewer's note…"));
         sleep(700);
         broadcast("revise", Map.of("field", "cta", "value", polished, "by", "reviewer"));
 
         broadcast("worker-done", Map.of("key", "skeptic", "payload", Map.of("note", note)));
-        broadcast("agent-state", Map.of("key", "skeptic", "state", "done"));
+        doneAgent("skeptic"); broadcast("agent-state", Map.of("key", "skeptic", "state", "done"));
         broadcast("flow", Map.of("from", "skeptic", "to", "copywriter", "what", "critique"));
         sleep(700);
         String revised = safeRevise(stage(), idea.text, copy.headline(), note);
         broadcast("revise", Map.of("field", "headline", "value", revised, "by", "skeptic"));
         broadcast("flow", Map.of("from", "copywriter", "to", "builder", "what", "revised hero"));
-        broadcast("agent-state", Map.of("key", "copywriter", "state", "done", "note", "rewritten. the web is settled"));
+        doneAgent("copywriter"); broadcast("agent-state", Map.of("key", "copywriter", "state", "done", "note", "rewritten. the web is settled"));
 
         Copy finalCopy = new Copy(copy.badge(), revised, copy.subhead(), polished, copy.features());
         idea.result = new Result(product, palette, finalCopy, art, review,
                 safePricing(stage(), idea.text, product.name()), buildFaq(idea.text), note);
+        idea.ms = System.currentTimeMillis() - t0;
+        broadcast("timing", Map.of("key", "total", "ms", idea.ms));
         idea.status = "done";
         broadcast("run-done", Map.of("id", idea.id));
         broadcast("queue", queuePayload());
@@ -296,6 +322,7 @@ public class CrewService {
         if (running || !backgroundBuilds) return;
         Idea next = queue.stream().filter(i -> !i.hidden && i.result == null).findFirst().orElse(null);
         if (next == null) return;
+        long bt = System.currentTimeMillis();
         try {
             Product product = new Product(safeName(fast(), next.text), "");
             Palette palette = safePalette(fast(), next.text);
@@ -308,6 +335,7 @@ public class CrewService {
             next.result = new Result(product, palette, finalCopy, art,
                     new Review("one thing to sharpen", "cta", polished, "the call to action was generic"),
                     safePricing(fast(), next.text, product.name()), buildFaq(next.text), note);
+            next.ms = System.currentTimeMillis() - bt;
             next.status = "built";
             broadcast("queue", queuePayload());
             broadcast("gallery", galleryPayload());
@@ -320,7 +348,7 @@ public class CrewService {
         List<Map<String, Object>> items = new ArrayList<>();
         for (Idea i : queue) {
             if (i.hidden || i.result == null) continue;
-            items.add(Map.of("id", i.id, "name", i.name, "idea", i.text, "result", i.result));
+            items.add(Map.of("id", i.id, "name", i.shownName(), "idea", i.text, "result", i.result, "ms", i.ms));
         }
         return Map.of("total", items.size(), "items", items);
     }
@@ -601,7 +629,9 @@ public class CrewService {
 
     // ---------- SSE plumbing ----------
 
-    public Map<String, Object> info(String audienceUrl) { return Map.of("audienceUrl", audienceUrl, "mock", mock); }
+    public Map<String, Object> info(String audienceUrl) {
+        return Map.of("audienceUrl", audienceUrl, "mock", mock, "open", submissionsOpen);
+    }
 
     private void broadcast(String event, Object data) {
         for (SseEmitter em : emitters) send(em, event, data);

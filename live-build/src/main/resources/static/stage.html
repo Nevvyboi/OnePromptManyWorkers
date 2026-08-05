@@ -62,6 +62,8 @@
   .ag .dot{width:10px;height:10px;border-radius:50%;background:var(--ac)}
   .ag .nm{display:block;font-family:var(--mono);font-size:.86rem;color:var(--paper);line-height:1.35}
   .ag .job{display:block;font-size:.76rem;color:var(--muted);line-height:1.25}
+  .ag .stwrap{text-align:right;white-space:nowrap}
+  .ag .ms{font-family:var(--mono);font-size:.6rem;color:var(--ac);opacity:.9;display:block;margin-top:.12rem}
   .ag .st{font-family:var(--mono);font-size:.62rem;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);white-space:nowrap;text-align:right}
   .ag.working .st,.ag.assisting .st{color:var(--ac)}
   .ag.done .st{color:var(--ac)}
@@ -113,6 +115,7 @@
   <header>
     <span class="live"><span class="blip"></span> Live Build</span>
     <span class="ttl">one prompt · many workers · every token on this laptop</span>
+    <span class="live" id="runTotal" style="color:var(--teal)"></span>
     <span class="live" id="modeTop" style="color:var(--muted)"></span>
   </header>
 
@@ -161,13 +164,14 @@
 <script>
   const NS = "http://www.w3.org/2000/svg";
   const COLORS = { namer:"#F5A524", copywriter:"#2DD4BF", designer:"#8B5CF6", illustrator:"#F472B6",
-                   builder:"#38BDF8", reviewer:"#A3E635", skeptic:"#FB7185" };
+                   pricer:"#FBBF24", builder:"#38BDF8", reviewer:"#A3E635", skeptic:"#FB7185" };
   // what each agent is for, in plain words, so the room understands the crew
   const JOBS = {
     namer:       { label: "name",    name: "Namer",       job: "invents the product name" },
     copywriter:  { label: "copy",    name: "Copywriter",  job: "writes the words" },
     designer:    { label: "design",  name: "Designer",    job: "picks the colours and type" },
     illustrator: { label: "art",     name: "Illustrator", job: "draws the hero artwork" },
+    pricer:      { label: "price",   name: "Pricer",      job: "works out the three tiers" },
     builder:     { label: "build",   name: "Builder",     job: "assembles the page" },
     reviewer:    { label: "review",  name: "Reviewer",    job: "polishes what is weak" },
     skeptic:     { label: "skeptic", name: "Skeptic",     job: "finds the flaw" },
@@ -234,7 +238,7 @@
       row.style.setProperty("--ac", COLORS[n.key]||"#8A8FA0");
       row.innerHTML = `<span class="dot"></span>
         <span><span class="nm">${meta.name}</span><span class="job">${meta.job}</span><span class="help" id="help-${n.key}"></span></span>
-        <span class="st">waiting</span>`;
+        <span class="stwrap"><span class="st">waiting</span><span class="ms" id="ms-${n.key}"></span></span>`;
       crewEl.appendChild(row);
     });
   }
@@ -342,6 +346,7 @@
 
   function resetStage(idea, name){
     web.innerHTML=""; crewEl.innerHTML=""; pageState=null;
+    document.getElementById("runTotal").textContent = "";
     pg.removeAttribute("style");
     pg.innerHTML = `<div class="waiting" id="waiting"><div class="pulse"></div><h3>Assembling the web…</h3><p>${esc(idea||"")}</p></div>`;
     setWho(name, idea);
@@ -372,6 +377,12 @@
     if(d.key==="copywriter" && d.payload) applyCopy(d.payload);
     if(d.key==="designer" && d.payload) applyDesign(d.payload);
     if(d.key==="skeptic" && d.payload) applySkeptic(d.payload.note || d.payload);
+  });
+  // how long each agent actually took, and the whole run
+  es.addEventListener("timing", e => {
+    const d = J(e), secs = (d.ms/1000).toFixed(1) + "s";
+    if (d.key === "total") { const t = document.getElementById("runTotal"); if (t) t.textContent = "built in " + secs; return; }
+    const el = document.getElementById("ms-" + d.key); if (el) el.textContent = secs;
   });
   es.addEventListener("revise", e => applyRevise(J(e)));
   es.onerror = () => {/* auto-reconnects */};

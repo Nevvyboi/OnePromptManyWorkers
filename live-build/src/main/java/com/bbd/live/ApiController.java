@@ -42,7 +42,15 @@ public class ApiController {
 
     @PostMapping("/submit")
     public Map<String, Object> submit(@RequestBody SubmitReq req, HttpServletRequest http) {
-        return crew.submit(req.text(), req.name(), clientIp(http));
+        return crew.submit(req.text(), req.name(), Boolean.TRUE.equals(req.showName()), clientIp(http));
+    }
+
+    /** Presenter only: open or close the doors on submissions. */
+    @PostMapping("/gate")
+    public ResponseEntity<Map<String, Object>> gate(@RequestParam(required = false) String key,
+                                                    @RequestParam(defaultValue = "true") boolean open) {
+        if (!crew.keyOk(key)) return ResponseEntity.status(403).body(Map.of("ok", false, "error", "presenter only"));
+        return ResponseEntity.ok(crew.gate(open));
     }
 
     private static String clientIp(HttpServletRequest r) {
@@ -72,5 +80,5 @@ public class ApiController {
     @GetMapping(value = "/qr", produces = MediaType.IMAGE_PNG_VALUE)
     public byte[] qr() { return Qr.png(audienceUrl(), 480); }
 
-    public record SubmitReq(String text, String name) {}
+    public record SubmitReq(String text, String name, Boolean showName) {}
 }

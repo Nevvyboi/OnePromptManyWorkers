@@ -37,6 +37,7 @@
   .card .who{display:flex;align-items:center;gap:.55rem;padding:.6rem .8rem;border-bottom:1px solid var(--line);background:#0f131c}
   .card .av{width:22px;height:22px;border-radius:50%;background:var(--amber);color:#0B0D12;font-weight:800;font-size:.72rem;
             display:flex;align-items:center;justify-content:center;flex:none}
+  .card .ms{margin-left:auto;font-family:var(--mono);font-size:.6rem;color:var(--teal);flex:none}
   .card .nm{font-family:var(--mono);font-size:.74rem;color:var(--paper);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .card .idea{font-family:var(--mono);font-size:.62rem;color:var(--faint);padding:.4rem .8rem .5rem;line-height:1.35;
               border-bottom:1px solid var(--line);background:#0f131c}
@@ -112,7 +113,7 @@
       p.font?`--ff:${p.font}`:"",
     ].filter(Boolean).join(";");
     el.innerHTML = `
-      <div class="who"><span class="av">${esc((who||"?")[0].toUpperCase())}</span><span class="nm">${esc(who||"anonymous")}</span></div>
+      <div class="who"><span class="av">${esc((who||"?")[0].toUpperCase())}</span><span class="nm">${esc(who||"anonymous")}</span>${item.ms?`<span class="ms">${(item.ms/1000).toFixed(1)}s</span>`:""}</div>
       <div class="idea">${esc(item.idea||"")}</div>
       <div class="mini" style="${style}">
         <div class="art">${art(R.art)}</div>

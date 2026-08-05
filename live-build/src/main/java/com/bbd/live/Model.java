@@ -15,7 +15,10 @@ public final class Model {
         public volatile boolean flagged = false;   // looks crude, presenter should read it
         public volatile boolean hidden = false;    // presenter dropped it
         public volatile Result result;             // what the crew made, for the gallery
+        public volatile boolean showName = false;  // only if they ticked the box
+        public volatile long ms = 0;               // how long the crew took
         public Idea(String id, String text, String name) { this.id = id; this.text = text; this.name = name; }
+        public String shownName() { return (showName && name != null) ? name : ""; }
     }
 
     /** The Copywriter's structured output. This is the talk's "structured output" lever, live. */

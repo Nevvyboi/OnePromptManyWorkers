@@ -28,6 +28,7 @@ const keyOk = url => url.searchParams.get("key") === KEY;
 let ideas = [];       // {id, text, name, status}
 let nextId = 1;
 let running = null;
+let submissionsOpen = true;   // the doors. you open and close them from /control
 const clients = new Set();
 
 // limits, matching the Java server
@@ -56,7 +57,13 @@ function sse(res, event, data) {
   res.write(`data: ${JSON.stringify(data)}\n\n`);
 }
 function broadcast(event, data) { for (const c of clients) sse(c, event, data); }
-function queuePayload() { return { ideas: ideas.filter(i => !i.hidden).map(i => ({ id: i.id, text: i.text, name: i.name, status: i.status, flagged: !!i.flagged })) }; }
+// a name is only ever shown if that person ticked the box
+const shownName = i => (i.showName && i.name) ? i.name : "";
+function queuePayload() {
+  return { open: submissionsOpen, ideas: ideas.filter(i => !i.hidden).map(i => ({
+    id: i.id, text: i.text, name: shownName(i), status: i.status,
+    flagged: !!i.flagged, ms: i.ms || 0 })) };
+}
 
 // ---------- the crew (canned outputs; the Java server asks Qwen for these) ----------
 const rnd = a => a[Math.floor(Math.random() * a.length)];
@@ -277,21 +284,24 @@ const EDGES = [
 // The stage run: seven agents, parallel starts, visible handoffs, two loops back.
 async function runCrew(idea, name) {
   running = idea && idea.id;
+  const t0 = Date.now(); const marks = {};
+  const startAgent = k => marks[k] = Date.now();
+  const doneAgent = k => { const ms = Date.now() - (marks[k] || t0); broadcast("timing", { key: k, ms }); return ms; };
   broadcast("run-start", { id: running, idea: idea.text, name });
   await sleep(420);
   broadcast("graph", { nodes: CREW, edges: EDGES });
   await sleep(380);
 
   // round one: three agents start together
-  broadcast("agent-state", { key: "namer", state: "working", note: "inventing a name…" });
-  broadcast("agent-state", { key: "designer", state: "working", note: "choosing a palette…" });
-  broadcast("agent-state", { key: "copywriter", state: "working", note: "drafting the hero…" });
+  startAgent("namer"); broadcast("agent-state", { key: "namer", state: "working", note: "inventing a name…" });
+  startAgent("designer"); broadcast("agent-state", { key: "designer", state: "working", note: "choosing a palette…" });
+  startAgent("copywriter"); broadcast("agent-state", { key: "copywriter", state: "working", note: "drafting the hero…" });
   await sleep(1100);
 
   // the namer is quickest; it helps two others
   const named = makeName(idea.text);
   broadcast("worker-done", { key: "namer", payload: named });
-  broadcast("agent-state", { key: "namer", state: "assisting", note: "done first, so it helps" });
+  doneAgent("namer"); broadcast("agent-state", { key: "namer", state: "assisting", note: "done first, so it helps" });
   broadcast("flow", { from: "namer", to: "copywriter", what: "the name" });
   broadcast("flow", { from: "namer", to: "illustrator", what: "the name" });
   broadcast("flow", { from: "namer", to: "pricer", what: "the name" });
@@ -301,49 +311,49 @@ async function runCrew(idea, name) {
   // the designer lands next and helps too
   const palette = PALETTES[Math.abs(hash(idea.text)) % PALETTES.length];
   broadcast("worker-done", { key: "designer", payload: palette });
-  broadcast("agent-state", { key: "designer", state: "assisting", note: "hands the illustrator its colours" });
+  doneAgent("designer"); broadcast("agent-state", { key: "designer", state: "assisting", note: "hands the illustrator its colours" });
   broadcast("flow", { from: "designer", to: "copywriter", what: "tone hint" });
   broadcast("flow", { from: "designer", to: "illustrator", what: "palette" });
   await sleep(850);
   broadcast("agent-state", { key: "designer", state: "done" });
 
   // the illustrator can only start once it has a name and colours
-  broadcast("agent-state", { key: "illustrator", state: "working", note: "drawing the hero artwork…" });
+  startAgent("illustrator"); broadcast("agent-state", { key: "illustrator", state: "working", note: "drawing the hero artwork…" });
   await sleep(1200);
   broadcast("worker-done", { key: "illustrator", payload: makeArt(idea.text, palette) });
-  broadcast("agent-state", { key: "illustrator", state: "done", note: "artwork ready" });
+  doneAgent("illustrator"); broadcast("agent-state", { key: "illustrator", state: "done", note: "artwork ready" });
   broadcast("flow", { from: "illustrator", to: "builder", what: "artwork" });
 
   // the pricer needs the name before it can sell anything
-  broadcast("agent-state", { key: "pricer", state: "working", note: "working out three tiers…" });
+  startAgent("pricer"); broadcast("agent-state", { key: "pricer", state: "working", note: "working out three tiers…" });
   await sleep(950);
   broadcast("worker-done", { key: "pricer", payload: { pricing: makePricing(idea.text, named.name) } });
-  broadcast("agent-state", { key: "pricer", state: "done", note: "three tiers, one featured" });
+  doneAgent("pricer"); broadcast("agent-state", { key: "pricer", state: "done", note: "three tiers, one featured" });
   broadcast("flow", { from: "pricer", to: "builder", what: "pricing" });
 
   // the copy lands
   const copy = makeCopy(idea.text, named.name);
   broadcast("worker-done", { key: "copywriter", payload: copy });
-  broadcast("agent-state", { key: "copywriter", state: "done", note: `hero: "${copy.headline}"` });
+  doneAgent("copywriter"); broadcast("agent-state", { key: "copywriter", state: "done", note: `hero: "${copy.headline}"` });
   broadcast("flow", { from: "copywriter", to: "builder", what: "copy" });
   broadcast("flow", { from: "designer", to: "builder", what: "palette" });
 
-  broadcast("agent-state", { key: "builder", state: "working", note: "assembling the page…" });
+  startAgent("builder"); broadcast("agent-state", { key: "builder", state: "working", note: "assembling the page…" });
   await sleep(900);
   broadcast("worker-done", { key: "builder" });
-  broadcast("agent-state", { key: "builder", state: "done", note: "page assembled" });
+  doneAgent("builder"); broadcast("agent-state", { key: "builder", state: "done", note: "page assembled" });
 
   // two checkers read the finished page at the same time
   broadcast("flow", { from: "builder", to: "reviewer", what: "the page" });
   broadcast("flow", { from: "builder", to: "skeptic", what: "the page" });
-  broadcast("agent-state", { key: "reviewer", state: "working", note: "checking it over…" });
-  broadcast("agent-state", { key: "skeptic", state: "working", note: "poking holes…" });
+  startAgent("reviewer"); broadcast("agent-state", { key: "reviewer", state: "working", note: "checking it over…" });
+  startAgent("skeptic"); broadcast("agent-state", { key: "skeptic", state: "working", note: "poking holes…" });
   await sleep(1150);
 
   // the reviewer sends back one concrete polish
   const review = makeReview(idea.text);
   broadcast("worker-done", { key: "reviewer", payload: review });
-  broadcast("agent-state", { key: "reviewer", state: "done", note: review.note });
+  doneAgent("reviewer"); broadcast("agent-state", { key: "reviewer", state: "done", note: review.note });
   broadcast("flow", { from: "reviewer", to: "copywriter", what: "polish the cta" });
   broadcast("agent-state", { key: "copywriter", state: "working", note: "taking the reviewer's note…" });
   await sleep(950);
@@ -352,14 +362,16 @@ async function runCrew(idea, name) {
   // and the skeptic sends back the harder question
   const note = skepticNote(idea.text);
   broadcast("worker-done", { key: "skeptic", payload: { note } });
-  broadcast("agent-state", { key: "skeptic", state: "done" });
+  doneAgent("skeptic"); broadcast("agent-state", { key: "skeptic", state: "done" });
   broadcast("flow", { from: "skeptic", to: "copywriter", what: "critique" });
   await sleep(1000);
   broadcast("revise", { field: "headline", value: reviseHeadline(idea.text, named.name), by: "skeptic" });
   broadcast("flow", { from: "copywriter", to: "builder", what: "revised hero" });
   broadcast("agent-state", { key: "copywriter", state: "done", note: "rewritten. the web is settled" });
 
-  if (idea.mark) { idea.mark.status = "done"; idea.mark.result = buildResult(idea.text); }
+  const total = Date.now() - t0;
+  broadcast("timing", { key: "total", ms: total });
+  if (idea.mark) { idea.mark.status = "done"; idea.mark.result = buildResult(idea.text); idea.mark.ms = total; }
   running = null;
   broadcast("run-done", { id: idea.id });
   broadcast("queue", queuePayload());
@@ -372,8 +384,10 @@ async function backgroundTick() {
   if (!running && backgroundOn) {
     const next = ideas.find(i => !i.hidden && i.status === "new" && !i.result);
     if (next) {
+      const bt = Date.now();
       next.status = "built";
       next.result = buildResult(next.text);
+      next.ms = Date.now() - bt;
       broadcast("queue", queuePayload());
       broadcast("gallery", galleryPayload());
     }
@@ -384,7 +398,8 @@ setTimeout(backgroundTick, 3000);
 
 function galleryPayload() {
   const done = ideas.filter(i => !i.hidden && i.result);
-  return { total: done.length, items: done.map(i => ({ id: i.id, name: i.name, idea: i.text, result: i.result })) };
+  return { total: done.length, items: done.map(i => ({
+    id: i.id, name: shownName(i), idea: i.text, result: i.result, ms: i.ms || 0 })) };
 }
 
 // ---------- http ----------
@@ -412,8 +427,17 @@ const server = http.createServer(async (req, res) => {
   if (p === "/join") return serveStatic(res, "join.html");
   if (p === "/gallery") return serveStatic(res, "gallery.html");
 
-  if (p === "/api/info") return json(res, 200, { audienceUrl: AUDIENCE_URL, mock: true });
+  if (p === "/api/info") return json(res, 200, { audienceUrl: AUDIENCE_URL, mock: true, open: submissionsOpen });
   if (p === "/api/gallery") return json(res, 200, galleryPayload());
+
+  // open or close the doors on submissions
+  if (p === "/api/gate" && req.method === "POST") {
+    if (!keyOk(url)) return json(res, 403, { ok:false, error:"presenter only" });
+    submissionsOpen = url.searchParams.get("open") !== "false";
+    broadcast("gate", { open: submissionsOpen });
+    broadcast("queue", queuePayload());
+    return json(res, 200, { ok:true, open: submissionsOpen });
+  }
 
   // "is mine done yet?" for the phone that sent it
   if (p.startsWith("/api/mine/")) {
@@ -459,6 +483,7 @@ const server = http.createServer(async (req, res) => {
     sse(res, "info", { mock:true, tally: ideas.length });
     sse(res, "queue", queuePayload());
     sse(res, "gallery", galleryPayload());
+    sse(res, "gate", { open: submissionsOpen });
     req.on("close", () => clients.delete(res));
     return;
   }
@@ -469,6 +494,7 @@ const server = http.createServer(async (req, res) => {
     const fwd = req.headers["x-forwarded-for"];
     const ip = (fwd ? String(fwd).split(",")[0].trim() : req.socket.remoteAddress) || "?";
     const text = clip((d.text || "").trim());
+    if (!submissionsOpen) return json(res, 200, { ok:false, closed:true, error:"Submissions are closed. Watch the big screen." });
     if (text.length < 3) return json(res, 200, { ok:false, error:"Give it a few more words." });
     if (blocked(text)) return json(res, 200, { ok:false, error:"Let's keep it friendly." });
     if (ideas.length >= MAX_QUEUE) return json(res, 200, { ok:false, error:"The queue is full for now. Thanks!" });
@@ -481,7 +507,8 @@ const server = http.createServer(async (req, res) => {
     }
     if (st.count >= MAX_PER_IP) return json(res, 200, { ok:false, error:"That's plenty from you. Let others have a go." });
     st.last = now; st.count++; ipState.set(ip, st);
-    const idea = { id: nextId++, text, name: (d.name||"").trim().slice(0,24), status:"new", flagged: isCrude(text) };
+    const idea = { id: nextId++, text, name: (d.name||"").trim().slice(0,24),
+                   showName: d.showName === true, status:"new", flagged: isCrude(text) };
     ideas.push(idea);
     broadcast("queue", queuePayload());
     broadcast("tally", { total: ideas.length });

@@ -135,6 +135,35 @@ Each agent has a house fallback, so a single bad response never breaks the build
 If Ollama is down entirely, flip to mock mode (above) and the show goes on. You can
 even say it: "small local models improvise, so I gave the crew a safety net."
 
+## Opening and closing the doors
+
+`/control` has one big button: **Close submissions**. Open at the start of the
+talk, closed when you are ready to reveal the wall, so the queue is final and
+nobody is still typing during your ending.
+
+Closed is enforced on the server, not just hidden in the UI: `POST /api/submit`
+returns `{"closed": true}` and every phone in the room flips to a "Submissions
+are closed. Watch the big screen." panel within a few seconds. Only the key
+holder can open or close them.
+
+## Names are opt in
+
+The audience form has a tick box, **"Show my name on the big screen"**. If it is
+not ticked, that person's name is never sent to the stage, the gallery, their
+page footer, or your control panel; they simply appear as *anonymous*. The
+consent travels with the submission, so nothing has to be scrubbed later.
+
+> It ships ticked by default, because the credit is half the fun and the box is
+> right there under the name field. If you would rather it be off by default,
+> flip `checked` on `#showName` in `static/index.html`.
+
+## Timing
+
+Every agent is timed. The stage roster shows how long each one took, and the
+header shows the total (`built in 9.8s`). The gallery puts the build time on
+each card. This is how you find out, on your own hardware, whether the Skeptic
+or the Copywriter is the one making the room wait.
+
 ## Presenter key
 
 The room is on your hotspot, and at a dev meetup somebody *will* try `/control`.

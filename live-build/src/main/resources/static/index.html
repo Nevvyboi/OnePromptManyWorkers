@@ -30,6 +30,15 @@
   button{width:100%;margin-top:1.4rem;background:var(--amber);color:#1a1204;border:none;border-radius:14px;font-family:var(--sans);font-weight:800;font-size:1.15rem;padding:17px;cursor:pointer;transition:transform .1s,opacity .2s}
   button:active{transform:scale(.98)}
   button:disabled{opacity:.5}
+  .opt{display:flex;align-items:center;gap:.65rem;margin-top:.9rem;font-family:var(--sans);
+       font-size:.92rem;color:var(--paper);letter-spacing:0;text-transform:none;cursor:pointer}
+  .opt input{width:22px;height:22px;accent-color:var(--amber);flex:none;margin:0;padding:0}
+  .closed{display:none;flex-direction:column;align-items:center;text-align:center;margin:auto 0;gap:1rem}
+  .closed.show{display:flex}
+  .closed .lock{width:78px;height:78px;border-radius:50%;background:rgba(138,143,160,.12);
+                border:1px solid var(--muted);display:flex;align-items:center;justify-content:center;font-size:2rem}
+  .closed h2{font-weight:800;font-size:1.6rem}
+  .closed p{color:var(--muted);max-width:26ch}
   .hint{font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-top:1.2rem;line-height:1.7}
   .hint b{color:var(--paper)}
   /* success */
@@ -65,6 +74,7 @@
 
     <label for="name">Your name <span style="color:#4a5060">(optional)</span></label>
     <input id="name" maxlength="24" placeholder="so we can credit you on screen">
+    <label class="opt"><input type="checkbox" id="showName" checked><span>Show my name on the big screen</span></label>
 
     <div class="err" id="err"></div>
     <button id="send">Send it to the crew</button>
@@ -83,6 +93,12 @@
     <button class="again" id="again">Send another idea</button>
   </div>
 
+  <div class="closed" id="closed">
+    <div class="lock">&#9432;</div>
+    <h2>Submissions are closed.</h2>
+    <p>The crew is finishing what the room already sent. Watch the big screen.</p>
+  </div>
+
   <div class="foot">served locally · bbd tech talk</div>
 
 <script>
@@ -93,6 +109,24 @@
 
   $("#send").addEventListener("click", submit);
   idea.addEventListener("keydown", e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit(); });
+
+  // the speaker can close the doors; reflect that immediately
+  function setOpen(open){
+    document.getElementById("closed").classList.toggle("show", !open);
+    document.getElementById("form").classList.toggle("hide", !open);
+    if (!open) document.getElementById("done").classList.remove("show");
+  }
+  // A light poll, deliberately not SSE: the event stream carries the whole
+  // queue, and a phone has no business seeing everyone else's ideas.
+  async function pollGate(){
+    try{
+      const d = await (await fetch("/api/info")).json();
+      if (d.open === false) setOpen(false);
+      else if (!document.getElementById("done").classList.contains("show")) setOpen(true);
+    }catch(e){}
+  }
+  pollGate();
+  setInterval(pollGate, 8000);
 
   // a real number beats "a few seconds": tick the button down so nobody mashes it
   function countdown(secs){
@@ -115,10 +149,11 @@
     try{
       const r = await fetch("/api/submit", {
         method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ text, name: name.value.trim() })
+        body: JSON.stringify({ text, name: name.value.trim(), showName: $("#showName").checked })
       });
       const d = await r.json();
       if (!d.ok){
+        if (d.closed) { setOpen(false); return; }
         err.textContent = d.error || "Something went wrong. Try again.";
         if (d.retryAfter) countdown(d.retryAfter); else $("#send").disabled=false;
         return;

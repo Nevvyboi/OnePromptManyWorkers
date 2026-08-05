@@ -50,6 +50,7 @@ The projector shows the whole story at once, so nobody has to take your word for
 - **how they help each other** — when an agent finishes it does not idle, it hands
   its work to another, and you watch that handoff travel the wire as a labelled
   chip: `tone hint`, `palette`, `the page`, `critique`, `revised hero`
+- **how long each one took** — per agent, plus the total, so slow steps are obvious
 
 Because the crew is a **spider net**, not a pipeline: agents run in parallel, the
 one that finishes first assists another, and **two** critiques loop back, so the
@@ -115,7 +116,9 @@ The server prints three URLs. Put **`/stage`** on the projector, keep the privat
 cd live-build/mock && PORT=5099 node server.js
 ```
 
-Full setup, hotspot notes, limits, and the fallback plan live in
+Names are opt in, submissions can be opened and closed from the control panel
+mid-talk, and every agent is timed. Full setup, hotspot notes, limits, and the
+fallback plan live in
 [live-build/README.md](live-build/README.md). To test the whole talk end to end
 before the day, follow [REHEARSAL.md](REHEARSAL.md).
 
