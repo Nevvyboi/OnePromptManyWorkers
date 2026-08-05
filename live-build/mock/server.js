@@ -32,15 +32,30 @@ const clients = new Set();
 // limits, matching the Java server
 const MAX_QUEUE = 250, MAX_PER_IP = 8, COOLDOWN_MS = 6000;
 const ipState = new Map();
-const BLOCK = new Set(["fuck", "shit", "cunt", "bitch", "bastard", "asshole", "dick", "nigger", "faggot", "retard", "rape"]);
+// A wordlist is a speed bump, not a filter. It cannot catch something crude that
+// uses no rude words ("a toilet app that scores your number twos"). The real
+// guard is you: nothing reaches the projector until you press Run, and you can
+// Hide anything you would rather not read out.
+const BLOCK = new Set(["fuck","fucking","shit","shite","cunt","bitch","bastard","asshole","arsehole",
+  "dick","prick","piss","damn","bollocks","wank","twat","slut","whore","nigger","faggot","retard","rape","nazi"]);
+const CRUDE = ["toilet","poo","poop","turd","fart","genital","penis","vagina","boob","nude","naked","porn","sex","orgasm","nipple","butthole","anus"];
 const blocked = t => t.toLowerCase().split(/[^a-z]+/).some(w => BLOCK.has(w));
+// cut on a word boundary, never mid-word, so nothing reads as broken on stage
+function clip(t, max = 120) {
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max - 1);
+  const sp = cut.lastIndexOf(" ");
+  return (sp > max * 0.6 ? cut.slice(0, sp) : cut).replace(/[,;:.\s]+$/, "") + "…";
+}
+// not blocked, just flagged, so the presenter sees it before it ever runs
+const isCrude = t => { const l = t.toLowerCase(); return CRUDE.some(w => l.includes(w)); };
 
 function sse(res, event, data) {
   res.write(`event: ${event}\n`);
   res.write(`data: ${JSON.stringify(data)}\n\n`);
 }
 function broadcast(event, data) { for (const c of clients) sse(c, event, data); }
-function queuePayload() { return { ideas: ideas.map(i => ({ id: i.id, text: i.text, name: i.name, status: i.status })) }; }
+function queuePayload() { return { ideas: ideas.filter(i => !i.hidden).map(i => ({ id: i.id, text: i.text, name: i.name, status: i.status, flagged: !!i.flagged })) }; }
 
 // ---------- canned crew ----------
 const rnd = a => a[Math.floor(Math.random() * a.length)];
@@ -187,7 +202,20 @@ const server = http.createServer(async (req, res) => {
   if (p === "/join") return serveStatic(res, "join.html");
 
   if (p === "/api/info") return json(res, 200, { audienceUrl: AUDIENCE_URL, mock: true });
-  if (p === "/api/queue") return json(res, 200, queuePayload());
+  // the raw submission list is presenter-only: it is unvetted text with names on it
+  if (p === "/api/queue") {
+    if (!keyOk(url)) return json(res, 403, { ideas: [], error: "presenter only" });
+    return json(res, 200, queuePayload());
+  }
+
+  if (p.startsWith("/api/hide/") && req.method === "POST") {
+    if (!keyOk(url)) return json(res, 403, { ok:false, error:"presenter only" });
+    const id = p.split("/").pop();
+    const it = ideas.find(i => String(i.id) === id);
+    if (it) it.hidden = true;
+    broadcast("queue", queuePayload());
+    return json(res, 200, { ok:true });
+  }
 
   if (p === "/api/qr") {
     const png = await QRCode.toBuffer(AUDIENCE_URL, { margin: 1, width: 480, color: { dark:"#0B0D12", light:"#FFFFFF" } });
@@ -205,22 +233,29 @@ const server = http.createServer(async (req, res) => {
 
   if (p === "/api/submit" && req.method === "POST") {
     const d = JSON.parse((await body(req)) || "{}");
-    const ip = req.socket.remoteAddress || "?";
-    const text = (d.text || "").trim().slice(0, 120);
+    // mirror the Java server: trust a forwarded address if present
+    const fwd = req.headers["x-forwarded-for"];
+    const ip = (fwd ? String(fwd).split(",")[0].trim() : req.socket.remoteAddress) || "?";
+    const text = clip((d.text || "").trim());
     if (text.length < 3) return json(res, 200, { ok:false, error:"Give it a few more words." });
     if (blocked(text)) return json(res, 200, { ok:false, error:"Let's keep it friendly." });
     if (ideas.length >= MAX_QUEUE) return json(res, 200, { ok:false, error:"The queue is full for now. Thanks!" });
     if (ideas.some(i => i.text.toLowerCase() === text.toLowerCase())) return json(res, 200, { ok:false, error:"Someone already sent that one." });
     const now = Date.now();
     const st = ipState.get(ip) || { last: 0, count: 0 };
-    if (now - st.last < COOLDOWN_MS) return json(res, 200, { ok:false, error:"One at a time. Give it a few seconds." });
+    if (now - st.last < COOLDOWN_MS) {
+      const wait = Math.ceil((COOLDOWN_MS - (now - st.last)) / 1000);
+      return json(res, 200, { ok:false, retryAfter: wait, error:`One at a time. Try again in ${wait} second${wait===1?"":"s"}.` });
+    }
     if (st.count >= MAX_PER_IP) return json(res, 200, { ok:false, error:"That's plenty from you. Let others have a go." });
     st.last = now; st.count++; ipState.set(ip, st);
-    const idea = { id: nextId++, text, name: (d.name||"").trim().slice(0,24), status:"new" };
+    const idea = { id: nextId++, text, name: (d.name||"").trim().slice(0,24), status:"new", flagged: isCrude(text) };
     ideas.push(idea);
     broadcast("queue", queuePayload());
     broadcast("tally", { total: ideas.length });
-    return json(res, 200, { ok:true, position: ideas.length, mock:true });
+    // hand back exactly what we stored, so the phone can never show something
+    // different from what the room will see
+    return json(res, 200, { ok:true, position: ideas.length, stored: text, mock:true });
   }
 
   if (p.startsWith("/api/run/") && req.method === "POST") {
@@ -229,7 +264,7 @@ const server = http.createServer(async (req, res) => {
     const id = p.split("/").pop();
     let idea;
     if (id === "demo") idea = { id:"demo", text:"an app that waters your plants when you forget", name:"the house crew" };
-    else { const found = ideas.find(i=>String(i.id)===id); if(found) idea = { id:found.id, text:found.text, name:found.name, mark:found }; }
+    else { const found = ideas.find(i=>String(i.id)===id && !i.hidden); if(found) idea = { id:found.id, text:found.text, name:found.name, mark:found }; }
     if (!idea) return json(res, 200, { ok:false, error:"not found" });
     json(res, 200, { ok:true });
     runCrew(idea, idea.name).catch(console.error);

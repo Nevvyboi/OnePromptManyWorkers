@@ -45,9 +45,17 @@ public class CrewService {
     private static final int MAX_PER_IP = 8;       // ideas per phone
     private static final long COOLDOWN_MS = 6000;  // wait between submits per phone
     private final Map<String, long[]> ipState = new ConcurrentHashMap<>(); // ip -> [lastMs, count]
+    // A wordlist is a speed bump, not a filter. It cannot catch something crude
+    // that uses no rude words ("a toilet app that scores your number twos").
+    // The real guard is you: nothing reaches the projector until you press Run,
+    // anything suspicious is flagged, and you can Hide it.
     private static final Set<String> BLOCK = Set.of(
-            "fuck", "shit", "cunt", "bitch", "bastard", "asshole", "dick",
-            "nigger", "faggot", "retard", "rape"); // light filter; you also curate what runs
+            "fuck", "fucking", "shit", "shite", "cunt", "bitch", "bastard", "asshole", "arsehole",
+            "dick", "prick", "piss", "damn", "bollocks", "wank", "twat", "slut", "whore",
+            "nigger", "faggot", "retard", "rape", "nazi");
+    private static final List<String> CRUDE = List.of(
+            "toilet", "poo", "poop", "turd", "fart", "genital", "penis", "vagina",
+            "boob", "nude", "naked", "porn", "sex", "orgasm", "nipple", "butthole", "anus");
 
     // lazily built on the first live run
     private Agents.Copywriter copywriter;
@@ -57,9 +65,8 @@ public class CrewService {
     // ---------- audience + presenter API ----------
 
     public Map<String, Object> submit(String text, String name, String ip) {
-        String t = text == null ? "" : text.strip();
+        String t = clip(text == null ? "" : text.strip());
         if (t.length() < 3) return err("Give it a few more words.");
-        if (t.length() > 120) t = t.substring(0, 120);
         if (isBlocked(t)) return err("Let's keep it friendly.");
         if (queue.size() >= MAX_QUEUE) return err("The queue is full for now. Thanks!");
         for (Idea i : queue) if (i.text.equalsIgnoreCase(t)) return err("Someone already sent that one.");
@@ -67,28 +74,61 @@ public class CrewService {
         long now = System.currentTimeMillis();
         long[] st = ipState.computeIfAbsent(ip == null ? "?" : ip, k -> new long[]{0, 0});
         synchronized (st) {
-            if (now - st[0] < COOLDOWN_MS) return err("One at a time. Give it a few seconds.");
+            if (now - st[0] < COOLDOWN_MS) {
+                long wait = (long) Math.ceil((COOLDOWN_MS - (now - st[0])) / 1000.0);
+                return Map.of("ok", false, "retryAfter", wait,
+                        "error", "One at a time. Try again in " + wait + " second" + (wait == 1 ? "" : "s") + ".");
+            }
             if (st[1] >= MAX_PER_IP) return err("That's plenty from you. Let others have a go.");
             st[0] = now; st[1]++;
         }
 
         Idea idea = new Idea(String.valueOf(nextId.getAndIncrement()), t, name == null ? "" : name.strip());
+        idea.flagged = isCrude(t);
         queue.add(idea);
         broadcast("queue", queuePayload());
         broadcast("tally", Map.of("total", queue.size()));
-        return Map.of("ok", true, "position", queue.size(), "mock", mock);
+        // hand back exactly what we stored, so the phone can never show
+        // something different from what the room will see
+        return Map.of("ok", true, "position", queue.size(), "stored", t, "mock", mock);
+    }
+
+    /** Presenter dropped this one. It leaves the list and can no longer be run. */
+    public Map<String, Object> hide(String id) {
+        queue.stream().filter(i -> i.id.equals(id)).findFirst().ifPresent(i -> i.hidden = true);
+        broadcast("queue", queuePayload());
+        return Map.of("ok", true);
     }
 
     private Map<String, Object> err(String message) { return Map.of("ok", false, "error", message); }
+
+    /** Cut on a word boundary, never mid-word, so nothing reads as broken on stage. */
+    private static String clip(String t) {
+        int max = 120;
+        if (t.length() <= max) return t;
+        String cut = t.substring(0, max - 1);
+        int sp = cut.lastIndexOf(' ');
+        String kept = (sp > max * 0.6) ? cut.substring(0, sp) : cut;
+        return kept.replaceAll("[,;:.\\s]+$", "") + "…";
+    }
 
     private boolean isBlocked(String text) {
         for (String w : text.toLowerCase().split("[^a-z]+")) if (BLOCK.contains(w)) return true;
         return false;
     }
 
+    /** Not blocked, just flagged, so the presenter reads it before it ever runs. */
+    private boolean isCrude(String text) {
+        String l = text.toLowerCase();
+        return CRUDE.stream().anyMatch(l::contains);
+    }
+
     public Map<String, Object> queuePayload() {
         List<Map<String, Object>> ideas = new ArrayList<>();
-        for (Idea i : queue) ideas.add(Map.of("id", i.id, "text", i.text, "name", i.name, "status", i.status));
+        for (Idea i : queue) {
+            if (i.hidden) continue;
+            ideas.add(Map.of("id", i.id, "text", i.text, "name", i.name, "status", i.status, "flagged", i.flagged));
+        }
         return Map.of("ideas", ideas);
     }
 
@@ -96,7 +136,7 @@ public class CrewService {
         if (running) return Map.of("ok", false, "error", "already running");
         Idea idea;
         if ("demo".equals(id)) idea = new Idea("demo", "an app that waters your plants when you forget", "the house crew");
-        else idea = queue.stream().filter(i -> i.id.equals(id)).findFirst().orElse(null);
+        else idea = queue.stream().filter(i -> i.id.equals(id) && !i.hidden).findFirst().orElse(null);
         if (idea == null) return Map.of("ok", false, "error", "not found");
         running = true;
         Idea target = idea;

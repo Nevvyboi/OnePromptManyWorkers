@@ -89,6 +89,8 @@ Run these so the real thing holds no surprises.
 - [ ] **Rude submission.** Send an idea with a swear word. It is rejected with "Let's keep it friendly." Nothing reaches the stage.
 - [ ] **Spam.** Submit twice fast from one phone. The second is rejected with "One at a time." Submit 9 times total. After 8 it says "That's plenty from you."
 - [ ] **Duplicate.** Two people send the same idea. The second gets "Someone already sent that one."
+- [ ] **Crude but clean.** Send something juvenile that contains no swear words at all (a live crowd test used a toilet-rating app). It will be ACCEPTED and flagged "check this one" in your panel. Practise pressing **Hide** on it. This is the drill that matters most, because the word list cannot catch meaning.
+- [ ] **The queue is private.** From another device, open `/api/queue` with no key. You should get 403, not the room's submissions.
 - [ ] **No submissions yet.** Before anyone submits, click **Run a built-in demo idea**. The show still works.
 - [ ] **Someone finds the control panel.** On a second device, open `/control` with no key. You should get a "presenter only" page, and `POST /api/run/1` should be refused. Nobody but you can drive the projector.
 - [ ] **Total meltdown.** Play your recorded backup video and keep talking. Practice the sentence: "Here's one I ran earlier, same code, same laptop."

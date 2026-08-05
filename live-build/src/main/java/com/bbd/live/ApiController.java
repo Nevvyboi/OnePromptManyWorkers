@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.util.List;
 import java.util.Map;
 
 /** Audience, presenter, and stage all talk to the crew through here. */
@@ -24,8 +25,20 @@ public class ApiController {
     @GetMapping("/info")
     public Map<String, Object> info() { return crew.info(audienceUrl()); }
 
+    /** Presenter only: this is unvetted text with people's names on it. */
     @GetMapping("/queue")
-    public Map<String, Object> queue() { return crew.queuePayload(); }
+    public ResponseEntity<Map<String, Object>> queue(@RequestParam(required = false) String key) {
+        if (!crew.keyOk(key)) return ResponseEntity.status(403).body(Map.of("ideas", List.of(), "error", "presenter only"));
+        return ResponseEntity.ok(crew.queuePayload());
+    }
+
+    /** Presenter only: drop an idea you would rather not read out. */
+    @PostMapping("/hide/{id}")
+    public ResponseEntity<Map<String, Object>> hide(@PathVariable String id,
+                                                    @RequestParam(required = false) String key) {
+        if (!crew.keyOk(key)) return ResponseEntity.status(403).body(Map.of("ok", false, "error", "presenter only"));
+        return ResponseEntity.ok(crew.hide(id));
+    }
 
     @PostMapping("/submit")
     public Map<String, Object> submit(@RequestBody SubmitReq req, HttpServletRequest http) {

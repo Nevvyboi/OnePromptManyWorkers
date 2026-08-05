@@ -32,6 +32,9 @@
   .item .txt .t{font-size:1rem;line-height:1.3}
   .item .txt .m{font-family:var(--mono);font-size:.7rem;color:var(--faint);margin-top:3px}
   .item button{background:var(--amber);color:#12100a;border:none;border-radius:9px;font-weight:700;padding:10px 16px;cursor:pointer;font-family:var(--sans);white-space:nowrap}
+  .item button.hide{background:none;border:1px solid var(--line);color:var(--faint);font-weight:600;padding:10px 12px}
+  .item button.hide:hover{border-color:var(--rose);color:var(--rose)}
+  .flag{display:inline-block;margin-left:.6rem;font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--rose);border:1px solid var(--rose);border-radius:11px;padding:.1rem .5rem;vertical-align:middle}
   .item button:disabled{background:#2a3040;color:var(--faint);cursor:default}
   .running{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)}
   .demo{margin-top:14px;background:none;border:1px dashed var(--line);color:var(--muted);border-radius:10px;padding:11px;width:100%;cursor:pointer;font-family:var(--mono);font-size:.8rem}
@@ -82,7 +85,12 @@
     items.slice().reverse().forEach(it=>{
       const el = document.createElement("div");
       el.className = "item" + (it.status==="done"?" done":"") + (running===it.id?" running":"");
-      el.innerHTML = `<div class="txt"><div class="t">${esc(it.text)}</div><div class="m">${it.name?esc(it.name)+" · ":""}#${it.id}${it.status==="done"?" · built":""}</div></div>`;
+      const flag = it.flagged ? '<span class="flag">check this one</span>' : "";
+      el.innerHTML = `<div class="txt"><div class="t">${esc(it.text)}${flag}</div><div class="m">${it.name?esc(it.name)+" · ":""}#${it.id}${it.status==="done"?" · built":""}</div></div>`;
+      const hide = document.createElement("button");
+      hide.textContent = "Hide"; hide.className = "hide"; hide.title = "Remove it from the list";
+      hide.onclick = () => fetch("/api/hide/"+it.id+"?key="+encodeURIComponent(KEY), {method:"POST"});
+      el.appendChild(hide);
       const b = document.createElement("button");
       b.textContent = running===it.id ? "building…" : (it.status==="done"?"Run again":"Run");
       b.disabled = !!running;
@@ -101,11 +109,13 @@
   }
   document.getElementById("demo").onclick = () => run("demo");
 
+  function refreshQueue(){ fetch("/api/queue?key="+encodeURIComponent(KEY)).then(r=>r.json()).then(d=>render(d.ideas)).catch(()=>{}); }
+
   const es = new EventSource("/api/events");
   es.addEventListener("queue", e => render(JSON.parse(e.data).ideas));
   es.addEventListener("run-start", e => { running = JSON.parse(e.data).id; document.querySelectorAll(".item button").forEach(b=>b.disabled=true); });
-  es.addEventListener("run-done", e => { running=null; document.getElementById("status").textContent="Done. Pick the next one."; fetch("/api/queue").then(r=>r.json()).then(d=>render(d.ideas)); });
-  fetch("/api/queue").then(r=>r.json()).then(d=>render(d.ideas)).catch(()=>{});
+  es.addEventListener("run-done", e => { running=null; document.getElementById("status").textContent="Done. Pick the next one."; refreshQueue(); });
+  refreshQueue();
 </script>
 </body>
 </html>

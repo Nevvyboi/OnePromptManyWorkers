@@ -12,6 +12,8 @@ public final class Model {
         public final String text;
         public final String name;
         public volatile String status = "new";
+        public volatile boolean flagged = false;   // looks crude, presenter should read it
+        public volatile boolean hidden = false;    // presenter dropped it
         public Idea(String id, String text, String name) { this.id = id; this.text = text; this.name = name; }
     }
 

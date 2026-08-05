@@ -437,39 +437,76 @@ async function build() {
     s.addNotes("The line to remember, then stop for two seconds. You don't program an agent, you constrain it. Prompt says what, tools say how far, schema says what shape, orchestration says who. Good agent engineering is good constraint design.");
   }
 
-  (await act("v", "Act five", "One Prompt.\nMany Workers.", "The orchestrator-worker pattern. Then we run it, live.", AMBER, "FiShare2"))
+  (await act("v", "Act five", "One Prompt.\nMany Workers.", "Agents that help each other, and a critique that loops back. Then we run it, live.", AMBER, "FiShare2"))
     .addNotes("Lift the energy. Lever six, orchestration, is the fun one. Instead of one agent doing everything, we point a single prompt at a whole crew. One becomes many.");
 
-  // =============================================== 18 ARCHITECTURE
+  // =============================================== 18 THE SPIDER NET
   {
     const s = slide();
     eyebrow(s, "The pattern", 0.62, AMBER);
-    s.addText([{ text: "Plan. Dispatch. ", options: { color: INK } }, { text: "Synthesize.", options: { color: INDIGO } }],
-      { x: MX, y: 1.15, w: 11, h: 0.9, fontFace: DISP, bold: true, fontSize: 32 });
-    const midY = 3.75;
-    function box(x, y, w, h, title, sub, col) {
-      s.addShape("roundRect", { x, y, w, h, rectRadius: 0.1, fill: { color: CARD }, line: { color: col || HAIR, width: 1.3 }, shadow: softShadow() });
-      s.addText(title, { x, y: y + h / 2 - 0.33, w, h: 0.4, align: "center", fontFace: MONO, fontSize: 13, color: INK, bold: true });
-      s.addText(sub.toUpperCase(), { x, y: y + h / 2 + 0.04, w, h: 0.3, align: "center", fontFace: MONO, fontSize: 8.5, color: MUTED, charSpacing: 1.5 });
+    s.addText([{ text: "Not a pipeline. ", options: { color: INK } }, { text: "A web.", options: { color: INDIGO } }],
+      { x: MX, y: 1.1, w: 11, h: 0.9, fontFace: DISP, bold: true, fontSize: 32 });
+    s.addText("Agents run in parallel. The one that finishes first helps another. And the critique loops back.",
+      { x: MX, y: 1.95, w: 7.4, h: 0.5, fontFace: BODY, fontSize: 15.5, color: MUTED });
+
+    // node centres
+    const N = {
+      copy:    { x: 6.30, y: 3.20, c: TEAL,   label: "copy",    sub: "writes" },
+      design:  { x: 3.95, y: 4.45, c: VIOLET, label: "design",  sub: "styles" },
+      build:   { x: 8.65, y: 4.45, c: SKY,    label: "build",   sub: "assembles" },
+      skeptic: { x: 6.30, y: 5.75, c: ROSE,   label: "skeptic", sub: "critiques" },
+    };
+    const R = 0.52;
+
+    function link(a, b, opts = {}) {
+      const x = Math.min(a.x, b.x), y = Math.min(a.y, b.y);
+      s.addShape("line", {
+        x, y, w: Math.abs(b.x - a.x), h: Math.abs(b.y - a.y),
+        flipH: b.x < a.x, flipV: b.y < a.y,
+        line: { color: opts.color || HAIR, width: opts.width || 1.6,
+                dashType: opts.dash ? "dash" : "solid", endArrowType: "triangle" },
+      });
     }
-    function arrow(x, y, w) { s.addShape("line", { x, y, w, h: 0, line: { color: FAINT, width: 1.8, endArrowType: "triangle" } }); }
-    box(MX, midY - 0.45, 1.7, 0.9, "one prompt", "english", INDIGO);
-    arrow(2.72, midY, 0.5);
-    box(3.32, midY - 0.45, 1.9, 0.9, "Planner", "structured", INDIGO);
-    arrow(5.32, midY, 0.5);
-    const wx = 5.92, ww = 1.85, wh = 0.72;
-    box(wx, midY - 1.35, ww, wh, "Worker", "engineer", TEAL);
-    box(wx, midY - 0.36, ww, wh, "Worker", "marketer", VIOLET);
-    box(wx, midY + 0.63, ww, wh, "Worker", "legal", ROSE);
-    arrow(wx + ww + 0.1, midY, 0.5);
-    box(wx + ww + 0.7, midY - 0.45, 1.9, 0.9, "Synthesizer", "fan-in", INDIGO);
-    arrow(wx + ww + 2.7, midY, 0.5);
-    box(wx + ww + 3.3, midY - 0.45, 1.6, 0.9, "one plan", "result", INDIGO);
+    function tag(text, x, y, color, w = 1.9) {
+      s.addText(text, { x: x - w / 2, y, w, h: 0.3, align: "center",
+        fontFace: MONO, fontSize: 9.5, color: color || MUTED, charSpacing: 1 });
+    }
+
+    // forward edges
+    link(N.design, N.copy,   { color: VIOLET });
+    link(N.copy,   N.build,  { color: TEAL });
+    link(N.design, N.build,  { color: VIOLET });
+    link(N.build,  N.skeptic,{ color: SKY });
+    tag("tone hint", 4.72, 3.52, VIOLET);
+    tag("copy",      7.72, 3.52, TEAL, 1.2);
+    tag("palette",   6.30, 4.62, VIOLET, 1.4);
+    tag("the page",  7.85, 5.20, SKY, 1.5);
+
+    // the feedback loop, routed around the outside so it reads instantly
+    const LX = 11.15;
+    s.addShape("line", { x: N.skeptic.x, y: N.skeptic.y, w: LX - N.skeptic.x, h: 0, line: { color: ROSE, width: 1.7, dashType: "dash" } });
+    s.addShape("line", { x: LX, y: N.copy.y, w: 0, h: N.skeptic.y - N.copy.y, flipV: true, line: { color: ROSE, width: 1.7, dashType: "dash" } });
+    s.addShape("line", { x: N.copy.x, y: N.copy.y, w: LX - N.copy.x, h: 0, flipH: true, line: { color: ROSE, width: 1.7, dashType: "dash", endArrowType: "triangle" } });
+    s.addText("critique", { x: LX - 0.05, y: 4.28, w: 1.6, h: 0.3, fontFace: MONO, fontSize: 9.5, color: ROSE, charSpacing: 1 });
+    s.addText("the copy is rewritten, live", { x: 7.5, y: 2.82, w: 3.5, h: 0.3, align: "right", fontFace: MONO, fontSize: 9, color: ROSE, charSpacing: .5 });
+
+    // nodes on top, so the lines tuck under them
+    for (const k of ["copy", "design", "build", "skeptic"]) {
+      const n = N[k];
+      s.addShape("ellipse", { x: n.x - R, y: n.y - R, w: R * 2, h: R * 2,
+        fill: { color: n.c }, line: { type: "none" }, shadow: softShadow() });
+      s.addText(n.label, { x: n.x - R, y: n.y - 0.22, w: R * 2, h: 0.3, align: "center",
+        fontFace: MONO, fontSize: 11.5, color: "FFFFFF", bold: true });
+      s.addText(n.sub, { x: n.x - R, y: n.y + 0.02, w: R * 2, h: 0.28, align: "center",
+        fontFace: MONO, fontSize: 8, color: "FFFFFF" });
+    }
+
     s.addText([
-      { text: "The planner ", options: { color: MUTED } }, { text: "invents", options: { color: INDIGO, bold: true } },
-      { text: " the crew. Nobody hardcoded those roles.", options: { color: MUTED } },
-    ], { x: 2.5, y: 6.2, w: 8.33, h: 0.5, align: "center", fontFace: BODY, fontSize: 16 });
-    s.addNotes("Left to right. One prompt hits a planner. The planner decides who should work and hands back a typed crew. Each worker is the same model wearing a different hat. A synthesizer folds every answer into one plan. Fan out, fan in. Nobody hardcoded those roles.");
+      { text: "Every agent is the same local model. ", options: { color: MUTED } },
+      { text: "The web is the architecture.", options: { color: INDIGO, bold: true } },
+    ], { x: 2.5, y: 6.65, w: 8.33, h: 0.5, align: "center", fontFace: BODY, fontSize: 16 });
+
+    s.addNotes("This is the shape of tonight's crew, and it is not a line. Copy and design start together. Design finishes first, and instead of sitting idle it helps: it hands the copywriter a tone hint. Both feed the builder. The builder hands the page to the skeptic. And then the important edge, the dashed one: the skeptic's critique loops all the way back to the copywriter, who rewrites the headline. You will watch that happen on the screen in a minute. Output from one agent becoming input to another, including backwards. That is the web.");
   }
 
   // =============================================== 19 WHAT STEERS

@@ -117,10 +117,27 @@ On top of that, the server guards itself so a live crowd can't flood or embarras
 | Cooldown | 6 seconds between submits | "One at a time." |
 | Duplicates | rejected (case-insensitive) | "Someone already sent that one." |
 | Length | 3 to 120 characters | "Give it a few more words." |
-| Profanity | small word filter | "Let's keep it friendly." |
+| Profanity | small word list | "Let's keep it friendly." |
+| Crude wording | **flagged, not blocked** | shown with a red "check this one" |
 
-Tune the numbers at the top of `CrewService.java`. Even with all of this, one idea
-building at a time and your own curation are the real safety.
+Tune the numbers at the top of `CrewService.java`.
+
+**Be honest with yourself about the word list.** It is a speed bump. It catches
+someone typing a swear word, and nothing else. It cannot catch an idea that is
+crude in *meaning* but polite in vocabulary, and a room full of developers will
+find that gap within minutes. A live crowd test on this exact app got "a smart
+toilet app that scores your number twos with fart sound effects" straight past it.
+
+So the design does not pretend otherwise:
+
+- anything matching a crude word list is **flagged** in your panel with a red
+  "check this one", rather than silently accepted,
+- every idea has a **Hide** button, which drops it from the list and stops it
+  being run at all,
+- and nothing is ever on the projector until *you* press Run.
+
+You are the filter. The software's job is to make sure you always see what you
+are about to show the room.
 
 ## No Java handy? Preview the whole thing in Node
 

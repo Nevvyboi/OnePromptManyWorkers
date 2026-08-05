@@ -89,6 +89,19 @@
   $("#send").addEventListener("click", submit);
   idea.addEventListener("keydown", e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit(); });
 
+  // a real number beats "a few seconds": tick the button down so nobody mashes it
+  function countdown(secs){
+    const btn = $("#send"), label = "Send it to the crew";
+    btn.disabled = true;
+    let left = secs;
+    btn.textContent = `Wait ${left}s`;
+    const t = setInterval(() => {
+      left -= 1;
+      if (left <= 0){ clearInterval(t); btn.textContent = label; btn.disabled = false; err.textContent = ""; }
+      else btn.textContent = `Wait ${left}s`;
+    }, 1000);
+  }
+
   async function submit(){
     const text = idea.value.trim();
     err.textContent = "";
@@ -100,8 +113,13 @@
         body: JSON.stringify({ text, name: name.value.trim() })
       });
       const d = await r.json();
-      if (!d.ok){ err.textContent = d.error || "Something went wrong. Try again."; $("#send").disabled=false; return; }
-      $("#sentText").textContent = text;
+      if (!d.ok){
+        err.textContent = d.error || "Something went wrong. Try again.";
+        if (d.retryAfter) countdown(d.retryAfter); else $("#send").disabled=false;
+        return;
+      }
+      // show what the server actually stored, never just what they typed
+      $("#sentText").textContent = d.stored || text;
       $("#pos").textContent = d.position ? `${d.position} idea${d.position === 1 ? "" : "s"} sent by the room so far` : "";
       $("#form").classList.add("hide");
       $("#done").classList.add("show");
