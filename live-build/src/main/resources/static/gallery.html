@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Build — what the crew made while we talked</title>
+<style>
+  :root{
+    --ink:#0B0D12; --panel:#141824; --line:#242a3a; --paper:#ECE7DE; --muted:#8A8FA0; --faint:#5a6072;
+    --amber:#F5A524; --teal:#2DD4BF; --violet:#8B5CF6; --rose:#FB7185; --sky:#38BDF8;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --serif:"Iowan Old Style",Palatino,Georgia,serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:radial-gradient(120% 80% at 50% -10%,#12151E 0%,var(--ink) 55%);color:var(--paper);font-family:var(--sans);
+       height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+  header{flex:none;padding:2.4vh 3vw 1.6vh;text-align:center}
+  .eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.3em;text-transform:uppercase;color:var(--amber);margin-bottom:.7rem}
+  h1{font-family:var(--serif);font-size:clamp(1.7rem,3.4vw,2.9rem);line-height:1.1;font-weight:400}
+  h1 em{font-style:italic;color:var(--amber)}
+  .sub{color:var(--muted);font-size:clamp(.85rem,1.2vw,1.05rem);margin-top:.6rem;font-family:var(--mono)}
+  .sub b{color:var(--paper)}
+
+  /* cards vary in height, so let each keep its own and leave the bottoms ragged */
+  .wall{flex:1;overflow:auto;padding:1vh 3vw 3vh;
+        display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1.05rem;
+        align-content:start;align-items:start}
+  .empty{grid-column:1/-1;text-align:center;color:var(--faint);font-family:var(--mono);padding:14vh 0;font-size:.95rem}
+
+  .card{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--panel);
+        box-shadow:0 26px 60px -44px #000;animation:in .5s ease both;
+        display:flex;flex-direction:column}
+  @keyframes in{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  .card .who{display:flex;align-items:center;gap:.55rem;padding:.6rem .8rem;border-bottom:1px solid var(--line);background:#0f131c}
+  .card .av{width:22px;height:22px;border-radius:50%;background:var(--amber);color:#0B0D12;font-weight:800;font-size:.72rem;
+            display:flex;align-items:center;justify-content:center;flex:none}
+  .card .nm{font-family:var(--mono);font-size:.74rem;color:var(--paper);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card .idea{font-family:var(--mono);font-size:.62rem;color:var(--faint);padding:.4rem .8rem .5rem;line-height:1.35;
+              border-bottom:1px solid var(--line);background:#0f131c}
+
+  /* the miniature landing page, built from the same data the stage uses */
+  .mini{--bg:#0e1016;--sf:#171a22;--ink2:#ECE7DE;--mut:#9aa0ae;--pri:#F5A524;--acc:#38BDF8;--ff:var(--sans);
+        background:var(--bg);color:var(--ink2);font-family:var(--ff);padding:.85rem .9rem 1rem;min-height:172px}
+  .mini .art{height:44px;border-radius:8px;margin-bottom:.6rem;overflow:hidden}
+  .mini .art svg{width:100%;height:100%;display:block}
+  .mini .badge{display:inline-block;font-family:var(--mono);font-size:.5rem;letter-spacing:.14em;text-transform:uppercase;
+               color:var(--pri);border:1px solid var(--pri);border-radius:10px;padding:.1rem .4rem;margin-bottom:.4rem}
+  .mini .pname{font-family:var(--mono);font-size:.58rem;letter-spacing:.1em;color:var(--acc);text-transform:uppercase;margin-bottom:.25rem}
+  .mini h3{font-size:.94rem;line-height:1.18;font-weight:800;letter-spacing:-.01em;margin-bottom:.35rem}
+  .mini p{font-size:.66rem;color:var(--mut);line-height:1.4}
+  .mini .cta{display:inline-block;margin-top:.55rem;background:var(--pri);color:#12100a;font-weight:700;
+             font-size:.6rem;padding:.32rem .7rem;border-radius:6px}
+  .mini .fx{display:grid;grid-template-columns:repeat(3,1fr);gap:.3rem;margin-top:.6rem}
+  .mini .fx div{background:var(--sf);border-radius:5px;padding:.32rem .35rem;font-size:.5rem;color:var(--mut);line-height:1.25;overflow:hidden}
+  .mini .fx b{display:block;color:var(--ink2);font-size:.55rem;margin-bottom:.1rem}
+  .card .sk{font-size:.63rem;color:var(--rose);padding:.5rem .8rem .6rem;border-top:1px solid var(--line);line-height:1.4;background:#0f131c}
+  .card .sk b{font-family:var(--mono);font-size:.5rem;letter-spacing:.12em;text-transform:uppercase;display:block;color:var(--rose);margin-bottom:.15rem;opacity:.8}
+
+  footer{flex:none;padding:1.2vh 3vw;border-top:1px solid var(--line);display:flex;justify-content:space-between;
+         font-family:var(--mono);font-size:.72rem;color:var(--faint);letter-spacing:.1em}
+  footer b{color:var(--amber)}
+</style>
+</head>
+<body>
+  <header>
+    <div class="eyebrow">while we were talking</div>
+    <h1>The crew never stopped. <em>Here is everyone's.</em></h1>
+    <div class="sub"><b id="count">0</b> pages built on this laptop, one per idea you sent, while I was busy talking</div>
+  </header>
+
+  <div class="wall" id="wall"><div class="empty">nothing built yet</div></div>
+
+  <footer>
+    <span>every page below was written, designed, illustrated, reviewed and criticised by agents on <b>this laptop</b></span>
+    <span id="mode"></span>
+  </footer>
+
+<script>
+  const esc = s => (s||"").replace(/[&<>]/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[m]));
+
+  // the illustrator's artwork, drawn from its {kind, seed, colors}
+  function art(a){
+    if(!a) return "";
+    const [c1,c2] = a.colors || ["#F5A524","#38BDF8"];
+    const s = a.seed || 7, r = n => ((s * (n+3) * 9301 + 49297) % 233280) / 233280;
+    if (a.kind === "rings")
+      return `<svg viewBox="0 0 200 60">${[0,1,2,3].map(i=>`<circle cx="${20+i*50}" cy="30" r="${10+r(i)*14}" fill="none" stroke="${i%2?c2:c1}" stroke-width="3" opacity=".9"/>`).join("")}</svg>`;
+    if (a.kind === "waves")
+      return `<svg viewBox="0 0 200 60">${[0,1,2].map(i=>`<path d="M0 ${20+i*12} Q 50 ${5+r(i)*30} 100 ${20+i*12} T 200 ${20+i*12}" fill="none" stroke="${i%2?c2:c1}" stroke-width="2.5" opacity=".85"/>`).join("")}</svg>`;
+    if (a.kind === "grid")
+      return `<svg viewBox="0 0 200 60">${Array.from({length:18},(_,i)=>`<rect x="${(i%9)*22+6}" y="${Math.floor(i/9)*26+6}" width="16" height="18" rx="3" fill="${r(i)>.5?c1:c2}" opacity="${.35+r(i)*.6}"/>`).join("")}</svg>`;
+    if (a.kind === "burst")
+      return `<svg viewBox="0 0 200 60">${Array.from({length:12},(_,i)=>`<line x1="100" y1="30" x2="${100+Math.cos(i/12*6.28)*(30+r(i)*55)}" y2="${30+Math.sin(i/12*6.28)*(12+r(i)*18)}" stroke="${i%2?c1:c2}" stroke-width="2.5" opacity=".8"/>`).join("")}<circle cx="100" cy="30" r="7" fill="${c1}"/></svg>`;
+    return `<svg viewBox="0 0 200 60">${[0,1,2,3].map(i=>`<ellipse cx="${28+i*48}" cy="${30+(r(i)-.5)*22}" rx="${16+r(i)*16}" ry="${11+r(i)*10}" fill="${i%2?c1:c2}" opacity=".55"/>`).join("")}</svg>`;
+  }
+
+  function card(item){
+    const R = item.result || {}, c = R.copy || {}, p = R.palette || {}, who = (item.name||"").trim();
+    const el = document.createElement("div");
+    el.className = "card";
+    const style = [
+      p.bg?`--bg:${p.bg}`:"", p.surface?`--sf:${p.surface}`:"", p.ink?`--ink2:${p.ink}`:"",
+      p.muted?`--mut:${p.muted}`:"", p.primary?`--pri:${p.primary}`:"", p.accent?`--acc:${p.accent}`:"",
+      p.font?`--ff:${p.font}`:"",
+    ].filter(Boolean).join(";");
+    el.innerHTML = `
+      <div class="who"><span class="av">${esc((who||"?")[0].toUpperCase())}</span><span class="nm">${esc(who||"anonymous")}</span></div>
+      <div class="idea">${esc(item.idea||"")}</div>
+      <div class="mini" style="${style}">
+        <div class="art">${art(R.art)}</div>
+        ${R.product && R.product.name ? `<div class="pname">${esc(R.product.name)}</div>` : ""}
+        <span class="badge">${esc(c.badge||"new")}</span>
+        <h3>${esc(c.headline||"")}</h3>
+        <p>${esc(c.subhead||"")}</p>
+        <span class="cta">${esc(c.cta||"Get started")}</span>
+        <div class="fx">${(c.features||[]).slice(0,3).map(f=>`<div><b>${esc(f.title)}</b>${esc((f.body||"").slice(0,44))}…</div>`).join("")}</div>
+      </div>
+      ${R.skeptic ? `<div class="sk"><b>the skeptic said</b>${esc(R.skeptic)}</div>` : ""}`;
+    return el;
+  }
+
+  function render(d){
+    const wall = document.getElementById("wall");
+    document.getElementById("count").textContent = d.total || 0;
+    if (!d.items || !d.items.length){ wall.innerHTML = '<div class="empty">nothing built yet</div>'; return; }
+    wall.innerHTML = "";
+    d.items.slice().reverse().forEach(i => wall.appendChild(card(i)));
+  }
+
+  fetch("/api/gallery").then(r=>r.json()).then(render).catch(()=>{});
+  fetch("/api/info").then(r=>r.json()).then(d=>{ document.getElementById("mode").textContent = d.mock ? "mock mode" : "qwen · local"; });
+
+  const es = new EventSource("/api/events");
+  es.addEventListener("gallery", e => render(JSON.parse(e.data)));
+  es.onerror = () => {};
+</script>
+</body>
+</html>

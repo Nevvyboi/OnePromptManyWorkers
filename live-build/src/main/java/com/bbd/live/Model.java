@@ -14,6 +14,7 @@ public final class Model {
         public volatile String status = "new";
         public volatile boolean flagged = false;   // looks crude, presenter should read it
         public volatile boolean hidden = false;    // presenter dropped it
+        public volatile Result result;             // what the crew made, for the gallery
         public Idea(String id, String text, String name) { this.id = id; this.text = text; this.name = name; }
     }
 
@@ -23,4 +24,16 @@ public final class Model {
 
     /** The Designer's choice, sent straight to the browser as CSS custom properties. */
     public record Palette(String bg, String surface, String ink, String muted, String primary, String accent, String font) {}
+
+    /** The Namer's output. */
+    public record Product(String name, String tagline) {}
+
+    /** The Illustrator's output. The browser draws this as SVG, so no image files. */
+    public record Art(String kind, int seed, List<String> colors) {}
+
+    /** The Reviewer's one concrete improvement. */
+    public record Review(String verdict, String field, String value, String note) {}
+
+    /** Everything the crew made for one idea, kept for the closing gallery. */
+    public record Result(Product product, Palette palette, Copy copy, Art art, Review review, String skeptic) {}
 }

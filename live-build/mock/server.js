@@ -57,124 +57,262 @@ function sse(res, event, data) {
 function broadcast(event, data) { for (const c of clients) sse(c, event, data); }
 function queuePayload() { return { ideas: ideas.filter(i => !i.hidden).map(i => ({ id: i.id, text: i.text, name: i.name, status: i.status, flagged: !!i.flagged })) }; }
 
-// ---------- canned crew ----------
+// ---------- the crew (canned outputs; the Java server asks Qwen for these) ----------
 const rnd = a => a[Math.floor(Math.random() * a.length)];
+const pick = (a, seed) => a[Math.abs(hash(seed)) % a.length];
+// FNV-1a plus a finaliser: similar sentences must land on different choices,
+// otherwise a wall of twenty pages all says the same thing
+const hash = s => {
+  let h = 2166136261;
+  for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); }
+  h ^= h >>> 13; h = Math.imul(h, 0x5bd1e995); h ^= h >>> 15;
+  return h >>> 0;
+};
+
 const PALETTES = [
   { bg:"#0f1220", surface:"#191d2e", ink:"#f4f5fb", muted:"#a6adc4", primary:"#7c9cff", accent:"#22d3ee", font:"-apple-system,Segoe UI,Roboto,sans-serif" },
   { bg:"#fffaf3", surface:"#ffffff", ink:"#1c1a17", muted:"#7a736a", primary:"#e8622c", accent:"#f2b705", font:"Georgia,'Times New Roman',serif" },
   { bg:"#0b1a14", surface:"#12241b", ink:"#eafff5", muted:"#8fb3a3", primary:"#34d399", accent:"#a3e635", font:"-apple-system,Segoe UI,Roboto,sans-serif" },
   { bg:"#faf7ff", surface:"#ffffff", ink:"#1e1633", muted:"#6b6486", primary:"#7c3aed", accent:"#ec4899", font:"-apple-system,Segoe UI,Roboto,sans-serif" },
   { bg:"#071018", surface:"#0f1c26", ink:"#eaf6ff", muted:"#93b2c6", primary:"#38bdf8", accent:"#f59e0b", font:"-apple-system,Segoe UI,Roboto,sans-serif" },
+  { bg:"#1a0f14", surface:"#2a171f", ink:"#fff0f4", muted:"#c69aa8", primary:"#fb7185", accent:"#fbbf24", font:"Georgia,'Times New Roman',serif" },
 ];
-let paletteIdx = 0;
+const ART_KINDS = ["blobs", "rings", "waves", "grid", "burst"];
 
-function makeCopy(idea) {
-  const clean = idea.trim().replace(/[.\s]+$/, "");
-  const stripped = clean.replace(/^an?\s+/i, "");
-  const Title = clean.charAt(0).toUpperCase() + clean.slice(1);
+const words = idea => idea.trim().replace(/[.\s]+$/, "").replace(/^an?\s+/i, "");
+const Cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+// --- Namer: invents a product name ---
+function makeName(idea) {
+  const w = words(idea).split(/\s+/).filter(x => x.length > 3);
+  const a = (w[0] || "Nova").replace(/[^a-zA-Z]/g, "");
+  const b = (w[1] || w[0] || "Kit").replace(/[^a-zA-Z]/g, "");
+  const forms = [
+    Cap(a) + "ly", Cap(a) + "r", Cap(a) + "Kit", Cap(b) + "Hub",
+    Cap(a.slice(0, 4)) + Cap(b.slice(0, 4)), Cap(a) + "Wise",
+  ];
+  return { name: pick(forms, idea), tagline: "for everyone who keeps forgetting" };
+}
+
+// --- Copywriter ---
+function makeCopy(idea, productName) {
+  const s = words(idea), T = Cap(s);
   return {
-    badge: rnd(["introducing", "new", "meet", "now live"]),
-    headline: rnd([`${Title}.`, `Finally, ${stripped}.`, `Meet ${stripped}.`, `${Title}, done right.`]),
-    subhead: `A delightfully simple way to ${stripped}. No setup, no nonsense, working in seconds.`,
-    cta: rnd(["Get early access", "Start free", "Join the waitlist", "Try it now"]),
-    features: [
-      { title: "Effortless", body: `It just works. It handles the hard part of ${stripped} so you don't have to.` },
-      { title: "Yours in seconds", body: "Open it and you're already going. Zero learning curve, no manual." },
-      { title: "Private by default", body: "Runs close to home. Your data stays where it belongs." },
-    ],
+    badge: pick(["introducing", "new", "meet", "now live"], idea),
+    headline: pick([`${T}.`, `Finally, ${s}.`, `Meet ${s}.`, `${T}, done right.`], idea + "h"),
+    subhead: pick([
+      `A delightfully simple way to ${s}. No setup, no nonsense, working in seconds.`,
+      `Everything you need to ${s}, and nothing you don't. Ready in under a minute.`,
+      `We took ${s} and removed every annoying part. What's left is this.`,
+      `Built for the days you forget. ${Cap(s)}, handled quietly in the background.`,
+    ], idea + "sh"),
+    cta: pick(["Get early access", "Start free", "Join the waitlist", "Try it now"], idea + "c"),
+    features: pick([
+      [ { title: "Effortless", body: `It handles the hard part of ${s} so you never think about it.` },
+        { title: "Ready in seconds", body: "Open it and you are already going. No manual, no setup wizard." },
+        { title: "Private by default", body: "Runs close to home. Your data stays where it belongs." } ],
+      [ { title: "Always watching", body: `It keeps an eye on ${s} even when you have forgotten all about it.` },
+        { title: "One tap", body: "The whole thing is a single screen. That is the entire product." },
+        { title: "Works offline", body: "No signal, no problem. It catches up when you are back." } ],
+      [ { title: "Quietly clever", body: `It learns your habits around ${s} and stops asking questions.` },
+        { title: "Share it", body: "Bring in the family, the team, the whole street. Everyone stays in sync." },
+        { title: "Free to start", body: "Use it properly before you decide whether it is worth anything." } ],
+      [ { title: "No nagging", body: "It tells you once, at the right moment, and then leaves you alone." },
+        { title: "Honest numbers", body: `See exactly what ${s} is costing you, in plain language.` },
+        { title: "Yours to keep", body: "Export everything, any time. No hostage taking." } ],
+    ], idea + "f"),
   };
 }
+
+// --- Illustrator: picks an abstract hero artwork the browser draws as SVG ---
+function makeArt(idea, palette) {
+  return { kind: pick(ART_KINDS, idea + "a"), seed: Math.abs(hash(idea)) % 997,
+           colors: [palette.primary, palette.accent] };
+}
+
+// --- Reviewer: one concrete polish, applied to the page ---
+function makeReview(idea) {
+  const s = words(idea);
+  return {
+    verdict: "solid, one thing to sharpen",
+    field: "cta",
+    value: pick([
+      "Try it in 30 seconds", "Get it working today", "See it in action",
+      "Set it up now, thank yourself later", "Take it for a spin",
+      "Start free, no card", "Let it do the remembering", "Give it one job",
+    ], idea + "r"),
+    note: "the call to action was generic",
+  };
+}
+
+// --- Skeptic ---
 const skepticNote = idea => {
-  const s = idea.trim().replace(/[.\s]+$/, "").replace(/^an?\s+/i, "");
-  return rnd([
+  const s = words(idea);
+  return pick([
     `Lovely idea. The hard part isn't building ${s}, it's getting the first ten people to care.`,
     `Great, but who actually pays for ${s}? Nail that before the logo.`,
     `Three people already pitched me ${s} this year. What's your unfair advantage?`,
     `Ship the ugly version this week. You'll learn more from that than another month of polish.`,
-  ]);
+  ], idea + "s");
 };
 
-const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
-function reviseHeadline(idea) {
-  const s = idea.trim().replace(/[.\s]+$/, "").replace(/^an?\s+/i, "");
-  return rnd([
-    `${cap(s)}. Zero effort, zero guilt.`,
-    `Set it up once. Never think about it again.`,
-    `${cap(s)}, minus the guesswork.`,
+// --- Copywriter's rewrite after the skeptic ---
+function reviseHeadline(idea, productName) {
+  const s = words(idea);
+  const first = s.split(/\s+/)[0] || "it";
+  const P = productName || Cap(first);
+  return pick([
+    `${Cap(s)}. Zero effort, zero guilt.`,
+    `${P} remembers, so you don't have to.`,
+    `${Cap(s)}, minus the guesswork.`,
     `The lazy way to ${s}. On purpose.`,
-  ]);
+    `Set it once. ${P} takes it from there.`,
+    `${P}. Because you will forget again.`,
+    `Stop thinking about ${first}. ${P} has it.`,
+    `${Cap(s)}, without the admin.`,
+  ], idea + "rv");
+}
+
+// the whole crew's output for one idea, with no stage events (used for the
+// quiet background builds that happen while the talk is going on)
+function buildResult(idea) {
+  const named = makeName(idea);
+  const palette = PALETTES[Math.abs(hash(idea)) % PALETTES.length];
+  const copy = makeCopy(idea, named.name);
+  const review = makeReview(idea);
+  copy.cta = review.value;
+  copy.headline = reviseHeadline(idea, named.name);
+  return { product: named, palette, copy, art: makeArt(idea, palette), review, skeptic: skepticNote(idea) };
 }
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-// The spider net: agents work in parallel, and when one finishes it helps
-// another. The Skeptic's critique loops BACK to the Copywriter, who revises
-// the headline live. That feedback edge is what makes it a net, not a line.
+const CREW = [
+  { key: "namer",       label: "name"    },
+  { key: "copywriter",  label: "copy"    },
+  { key: "designer",    label: "design"  },
+  { key: "illustrator", label: "art"     },
+  { key: "builder",     label: "build"   },
+  { key: "reviewer",    label: "review"  },
+  { key: "skeptic",     label: "skeptic" },
+];
+const EDGES = [
+  { from: "namer", to: "copywriter" },
+  { from: "namer", to: "illustrator" },
+  { from: "designer", to: "copywriter" },
+  { from: "designer", to: "illustrator" },
+  { from: "copywriter", to: "builder" },
+  { from: "designer", to: "builder" },
+  { from: "illustrator", to: "builder" },
+  { from: "builder", to: "reviewer" },
+  { from: "builder", to: "skeptic" },
+  { from: "reviewer", to: "copywriter", feedback: true },
+  { from: "skeptic", to: "copywriter", feedback: true },
+];
+
+// The stage run: seven agents, parallel starts, visible handoffs, two loops back.
 async function runCrew(idea, name) {
   running = idea && idea.id;
   broadcast("run-start", { id: running, idea: idea.text, name });
-  await sleep(450);
-  broadcast("graph", {
-    nodes: [
-      { key: "copywriter", label: "copy" },
-      { key: "designer", label: "design" },
-      { key: "builder", label: "build" },
-      { key: "skeptic", label: "skeptic" },
-    ],
-    edges: [
-      { from: "designer", to: "copywriter" },
-      { from: "copywriter", to: "builder" },
-      { from: "designer", to: "builder" },
-      { from: "builder", to: "skeptic" },
-      { from: "skeptic", to: "copywriter", feedback: true },
-    ],
-  });
-  await sleep(400);
+  await sleep(420);
+  broadcast("graph", { nodes: CREW, edges: EDGES });
+  await sleep(380);
 
-  // round 1: copywriter and designer start together
-  broadcast("agent-state", { key: "copywriter", state: "working", note: "drafting the hero…" });
+  // round one: three agents start together
+  broadcast("agent-state", { key: "namer", state: "working", note: "inventing a name…" });
   broadcast("agent-state", { key: "designer", state: "working", note: "choosing a palette…" });
-  await sleep(1300);
+  broadcast("agent-state", { key: "copywriter", state: "working", note: "drafting the hero…" });
+  await sleep(1100);
 
-  // designer lands first, applies the palette, then helps the copywriter
-  const design = PALETTES[paletteIdx++ % PALETTES.length];
-  broadcast("worker-done", { key: "designer", payload: design });
-  broadcast("agent-state", { key: "designer", state: "assisting", note: "done early, so it helps: sends the copywriter a tone hint" });
+  // the namer is quickest; it helps two others
+  const named = makeName(idea.text);
+  broadcast("worker-done", { key: "namer", payload: named });
+  broadcast("agent-state", { key: "namer", state: "assisting", note: "done first, so it helps" });
+  broadcast("flow", { from: "namer", to: "copywriter", what: "the name" });
+  broadcast("flow", { from: "namer", to: "illustrator", what: "the name" });
+  await sleep(900);
+  broadcast("agent-state", { key: "namer", state: "done" });
+
+  // the designer lands next and helps too
+  const palette = PALETTES[Math.abs(hash(idea.text)) % PALETTES.length];
+  broadcast("worker-done", { key: "designer", payload: palette });
+  broadcast("agent-state", { key: "designer", state: "assisting", note: "hands the illustrator its colours" });
   broadcast("flow", { from: "designer", to: "copywriter", what: "tone hint" });
-  await sleep(1000);
+  broadcast("flow", { from: "designer", to: "illustrator", what: "palette" });
+  await sleep(850);
   broadcast("agent-state", { key: "designer", state: "done" });
 
-  // copywriter lands, feeds the builder (and so does the designer's palette)
-  const copy = makeCopy(idea.text);
+  // the illustrator can only start once it has a name and colours
+  broadcast("agent-state", { key: "illustrator", state: "working", note: "drawing the hero artwork…" });
+  await sleep(1200);
+  broadcast("worker-done", { key: "illustrator", payload: makeArt(idea.text, palette) });
+  broadcast("agent-state", { key: "illustrator", state: "done", note: "artwork ready" });
+  broadcast("flow", { from: "illustrator", to: "builder", what: "artwork" });
+
+  // the copy lands
+  const copy = makeCopy(idea.text, named.name);
   broadcast("worker-done", { key: "copywriter", payload: copy });
   broadcast("agent-state", { key: "copywriter", state: "done", note: `hero: "${copy.headline}"` });
   broadcast("flow", { from: "copywriter", to: "builder", what: "copy" });
   broadcast("flow", { from: "designer", to: "builder", what: "palette" });
+
   broadcast("agent-state", { key: "builder", state: "working", note: "assembling the page…" });
   await sleep(900);
   broadcast("worker-done", { key: "builder" });
-  broadcast("agent-state", { key: "builder", state: "done", note: "page assembled, 3 sections" });
+  broadcast("agent-state", { key: "builder", state: "done", note: "page assembled" });
 
-  // builder hands the page to the skeptic
+  // two checkers read the finished page at the same time
+  broadcast("flow", { from: "builder", to: "reviewer", what: "the page" });
   broadcast("flow", { from: "builder", to: "skeptic", what: "the page" });
+  broadcast("agent-state", { key: "reviewer", state: "working", note: "checking it over…" });
   broadcast("agent-state", { key: "skeptic", state: "working", note: "poking holes…" });
-  await sleep(1100);
+  await sleep(1150);
+
+  // the reviewer sends back one concrete polish
+  const review = makeReview(idea.text);
+  broadcast("worker-done", { key: "reviewer", payload: review });
+  broadcast("agent-state", { key: "reviewer", state: "done", note: review.note });
+  broadcast("flow", { from: "reviewer", to: "copywriter", what: "polish the cta" });
+  broadcast("agent-state", { key: "copywriter", state: "working", note: "taking the reviewer's note…" });
+  await sleep(950);
+  broadcast("revise", { field: "cta", value: review.value, by: "reviewer" });
+
+  // and the skeptic sends back the harder question
   const note = skepticNote(idea.text);
   broadcast("worker-done", { key: "skeptic", payload: { note } });
   broadcast("agent-state", { key: "skeptic", state: "done" });
-
-  // the net closes: critique flows back, the copywriter revises live
   broadcast("flow", { from: "skeptic", to: "copywriter", what: "critique" });
-  broadcast("agent-state", { key: "copywriter", state: "working", note: "takes the critique, revising the hero…" });
-  await sleep(1300);
-  broadcast("revise", { field: "headline", value: reviseHeadline(idea.text), by: "copywriter" });
+  await sleep(1000);
+  broadcast("revise", { field: "headline", value: reviseHeadline(idea.text, named.name), by: "skeptic" });
   broadcast("flow", { from: "copywriter", to: "builder", what: "revised hero" });
-  broadcast("agent-state", { key: "copywriter", state: "done", note: "headline revised. the web is settled" });
+  broadcast("agent-state", { key: "copywriter", state: "done", note: "rewritten. the web is settled" });
 
-  if (idea.mark) idea.mark.status = "done";
+  if (idea.mark) { idea.mark.status = "done"; idea.mark.result = buildResult(idea.text); }
   running = null;
   broadcast("run-done", { id: idea.id });
   broadcast("queue", queuePayload());
+  broadcast("gallery", galleryPayload());
+}
+
+// ---------- quiet background builds, while the talk is happening ----------
+let backgroundOn = true;
+async function backgroundTick() {
+  if (!running && backgroundOn) {
+    const next = ideas.find(i => !i.hidden && i.status === "new" && !i.result);
+    if (next) {
+      next.status = "built";
+      next.result = buildResult(next.text);
+      broadcast("queue", queuePayload());
+      broadcast("gallery", galleryPayload());
+    }
+  }
+  setTimeout(backgroundTick, 2500);
+}
+setTimeout(backgroundTick, 3000);
+
+function galleryPayload() {
+  const done = ideas.filter(i => !i.hidden && i.result);
+  return { total: done.length, items: done.map(i => ({ id: i.id, name: i.name, idea: i.text, result: i.result })) };
 }
 
 // ---------- http ----------
@@ -200,8 +338,10 @@ const server = http.createServer(async (req, res) => {
     return serveStatic(res, "control.html");
   }
   if (p === "/join") return serveStatic(res, "join.html");
+  if (p === "/gallery") return serveStatic(res, "gallery.html");
 
   if (p === "/api/info") return json(res, 200, { audienceUrl: AUDIENCE_URL, mock: true });
+  if (p === "/api/gallery") return json(res, 200, galleryPayload());
   // the raw submission list is presenter-only: it is unvetted text with names on it
   if (p === "/api/queue") {
     if (!keyOk(url)) return json(res, 403, { ideas: [], error: "presenter only" });
@@ -227,6 +367,7 @@ const server = http.createServer(async (req, res) => {
     res.write("\n"); clients.add(res);
     sse(res, "info", { mock:true, tally: ideas.length });
     sse(res, "queue", queuePayload());
+    sse(res, "gallery", galleryPayload());
     req.on("close", () => clients.delete(res));
     return;
   }

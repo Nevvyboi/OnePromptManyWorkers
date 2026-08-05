@@ -43,15 +43,27 @@ idea) becomes many workers that build a real landing page on stage.
 The projector shows the whole story at once, so nobody has to take your word for it:
 
 - **whose idea it is** — the sender's name and their exact words, up top
-- **what each agent is for** — Copywriter *writes the words*, Designer *picks the
-  colours and type*, Builder *assembles the page*, Skeptic *finds the flaw*
+- **what each of the seven agents is for** — Namer *invents the product name*,
+  Copywriter *writes the words*, Designer *picks the colours and type*,
+  Illustrator *draws the hero artwork*, Builder *assembles the page*,
+  Reviewer *polishes what is weak*, Skeptic *finds the flaw*
 - **how they help each other** — when an agent finishes it does not idle, it hands
   its work to another, and you watch that handoff travel the wire as a labelled
   chip: `tone hint`, `palette`, `the page`, `critique`, `revised hero`
 
 Because the crew is a **spider net**, not a pipeline: agents run in parallel, the
-one that finishes first assists another, and the Skeptic's critique loops back so
-the Copywriter rewrites the headline live on the projector.
+one that finishes first assists another, and **two** critiques loop back, so the
+Copywriter rewrites both the call to action and the headline live on the projector.
+
+### And the closing reveal
+
+Ideas do not just sit in a queue. From the moment someone sends one, the crew
+**quietly builds it in the background while you carry on talking**. At the end of
+the talk you open `/gallery` and the room sees every single page at once, each
+with its own invented product name, artwork, palette, copy and criticism, credited
+to the person who sent the idea.
+
+<img src="assets/live-gallery.png" alt="The closing gallery: a wall of landing pages, one per attendee" width="900">
 
 <table>
   <tr>

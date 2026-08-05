@@ -44,6 +44,39 @@ public final class Agents {
         String vibe(String idea);
     }
 
+    /** Invents a short product name for the idea. */
+    public interface Namer {
+        @SystemMessage("""
+            You name products. Given an idea, invent ONE short brandable name: a single
+            word, 4 to 12 letters, no spaces, no punctuation, easy to say out loud.
+            Reply with just the name, nothing else.
+            """)
+        @UserMessage("Product idea: {{it}}")
+        String name(String idea);
+    }
+
+    /** Chooses the style of the hero artwork. The browser draws it as SVG. */
+    public interface Illustrator {
+        @SystemMessage("""
+            You art-direct hero graphics. Given a product idea, choose ONE abstract
+            style from exactly this list: blobs, rings, waves, grid, burst.
+            Reply with just that single word, nothing else.
+            """)
+        @UserMessage("Product idea: {{it}}")
+        String style(String idea);
+    }
+
+    /** Reads the finished page and sends back one concrete improvement. */
+    public interface Reviewer {
+        @SystemMessage("""
+            You are a senior designer reviewing a landing page. The call to action is
+            weak. Write ONE stronger call to action: at most 5 words, plain and
+            specific, no exclamation marks. Reply with just those words.
+            """)
+        @UserMessage("Product idea: {{idea}}\nCurrent call to action: {{cta}}")
+        String polish(@V("idea") String idea, @V("cta") String cta);
+    }
+
     /** One honest, useful criticism. */
     public interface Skeptic {
         @SystemMessage("""

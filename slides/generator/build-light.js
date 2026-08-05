@@ -134,7 +134,7 @@ async function build() {
   {
     const s = slide();
     eyebrow(s, "Join in  ·  this one's interactive");
-    s.addText([{ text: "Scan it. Type ", options: { color: INK } }, { text: "one line.", options: { color: INDIGO } }, { text: "\nWe build one live, later.", options: { color: INK } }],
+    s.addText([{ text: "Scan it. Type ", options: { color: INK } }, { text: "one line.", options: { color: INDIGO } }, { text: "\nThe crew starts on it now.", options: { color: INK } }],
       { x: MX, y: 1.5, w: 7, h: 1.9, fontFace: DISP, bold: true, fontSize: 38, lineSpacing: 46 });
     const steps = [["1", "Join the room's Wi-Fi hotspot"], ["2", "Scan the code with your phone"], ["3", "Send the crew a product idea"]];
     steps.forEach((st, i) => {
@@ -143,7 +143,7 @@ async function build() {
       s.addText(st[0], { x: MX, y, w: 0.44, h: 0.44, align: "center", valign: "middle", fontFace: DISP, bold: true, fontSize: 15, color: "FFFFFF" });
       s.addText(st[1], { x: MX + 0.62, y: y - 0.02, w: 6, h: 0.48, fontFace: BODY, fontSize: 16.5, color: MUTED, valign: "middle" });
     });
-    s.addText("Every idea runs on the laptop up here. Nothing you type leaves the room.",
+    s.addText("From the moment you send it, agents on this laptop start building your page. You will see them all at the end.",
       { x: MX, y: 6.35, w: 6.6, h: 0.6, fontFace: MONO, fontSize: 11, color: FAINT, lineSpacing: 16 });
     const qx = 8.7, qy = 1.55, qw = 3.5, qh = 4.45;
     card(s, qx, qy, qw, qh);
@@ -151,7 +151,7 @@ async function build() {
     await chip(s, qx + qw / 2, qy + 3.3, 0.5, "FiSmartphone", INDIGO);
     s.addText("scan to join", { x: qx, y: qy + 3.62, w: qw, h: 0.35, align: "center", fontFace: DISP, bold: true, fontSize: 16, color: INK });
     s.addText("the crew is waiting", { x: qx, y: qy + 3.95, w: qw, h: 0.3, align: "center", fontFace: BODY, fontSize: 12, color: MUTED });
-    s.addNotes("Put this up early and leave it up. 'This talk has a live build. Scan that, hop on the wifi, and send my agents a product idea, anything, the sillier the better. Later we pick one and build a real landing page for it, live, on this screen. It all runs on this laptop.' Then carry on. Submissions pile up while you teach.");
+    s.addNotes("Put this up early and leave it up. This is the setup for the whole talk. 'Scan that, hop on the wifi, send my agents a product idea. Here is the thing: the moment you send it, a crew of agents on this laptop starts building a real landing page for it. They will keep working the entire time I am talking. At the end I will show you every single one.' Then carry on. The queue fills while you teach, and the payoff is waiting.");
   }
 
   // =============================================== 4 ROADMAP
@@ -673,6 +673,52 @@ async function build() {
       s.addText(items[i][3], { x: x + 0.4, y: y + 2.0, w: cw - 0.8, h: 1.0, fontFace: BODY, fontSize: 14, color: MUTED, lineSpacing: 20 });
     }
     s.addNotes("Reflect while the awe is warm. One sentence became a team that split the work and reported back. It self-assembled, it stayed home, it was a hundred lines. The scary part is not that it worked, it is how little it took.");
+  }
+
+  // =============================================== THE REVEAL
+  {
+    const s = slide();
+    eyebrow(s, "The reveal", 0.62, AMBER);
+    s.addText([{ text: "You have been ", options: { color: INK } }, { text: "employing them", options: { color: INDIGO } }, { text: "\nthis whole time.", options: { color: INK } }],
+      { x: MX, y: 1.6, w: 8.4, h: 2, fontFace: DISP, bold: true, fontSize: 40, lineSpacing: 50 });
+    s.addText("Every idea you sent went straight into the queue. While I was talking about prompts and levers and loops, seven agents on this laptop were quietly building a landing page for each one.",
+      { x: MX, y: 3.85, w: 6.5, h: 1.6, fontFace: BODY, fontSize: 17, color: MUTED, lineSpacing: 27 });
+    stat(s, MX, 5.6, "7", "agents per idea", INDIGO);
+    stat(s, MX + 2.2, 5.6, "0", "cloud calls", INK);
+    stat(s, MX + 4.1, 5.6, "1", "laptop, still warm", INK);
+    const steps = [["FiSmartphone", INDIGO, "you sent it"], ["FiCpu", VIOLET, "they built it"], ["FiGrid", TEAL, "here it all is"]];
+    for (let i = 0; i < steps.length; i++) {
+      const y = 1.9 + i * 1.5, x = 8.4;
+      card(s, x, y, 4.0, 1.15);
+      await chip(s, x + 0.62, y + 0.575, 0.6, steps[i][0], steps[i][1]);
+      s.addText(steps[i][2], { x: x + 1.15, y, w: 2.7, h: 1.15, valign: "middle", fontFace: DISP, bold: true, fontSize: 17, color: INK });
+      if (i < steps.length - 1) s.addShape("line", { x: x + 2.0, y: y + 1.15, w: 0, h: 0.35, line: { color: FAINT, width: 1.6, endArrowType: "triangle" } });
+    }
+    s.addNotes("This is the moment the whole talk has been building to. Say it slowly. 'Remember the code at the start? Every idea you sent went into a queue. And while I was up here talking about prompts and levers and loops, the crew never stopped. Seven agents. One laptop. No internet. Let me show you what they made.' Then switch the projector to the gallery.");
+  }
+
+  // =============================================== THE WALL
+  {
+    const s = slide();
+    dot(s, MX + 0.12, 0.78, 0.2, INDIGO);
+    s.addText("THE WALL", { x: MX + 0.4, y: 0.62, w: 5, h: 0.32, fontFace: MONO, fontSize: 12, color: INDIGO, charSpacing: 4, valign: "middle" });
+    s.addText([{ text: "Everyone's, ", options: { color: INK } }, { text: "all at once.", options: { color: INDIGO } }],
+      { x: 0, y: 1.6, w: W, h: 1.1, align: "center", fontFace: DISP, bold: true, fontSize: 46 });
+    s.addText("Find yours. Your name is on it.",
+      { x: 0, y: 2.85, w: W, h: 0.5, align: "center", fontFace: BODY, fontSize: 19, color: MUTED });
+    const cols = [["a name", INDIGO], ["artwork", VIOLET], ["copy", TEAL], ["a palette", AMBER], ["a critique", ROSE]];
+    const cw = 2.1, gap = 0.28, tot = cols.length * cw + (cols.length - 1) * gap;
+    let cx = (W - tot) / 2;
+    for (let i = 0; i < cols.length; i++) {
+      s.addShape("roundRect", { x: cx, y: 3.75, w: cw, h: 1.5, rectRadius: 0.12, fill: { color: CARD }, line: { color: cols[i][1], width: 1.4 }, shadow: softShadow() });
+      s.addText(cols[i][0], { x: cx, y: 3.75, w: cw, h: 1.5, align: "center", valign: "middle", fontFace: DISP, bold: true, fontSize: 15, color: INK });
+      cx += cw + gap;
+    }
+    s.addText("every page invented from scratch, by a different run of the same seven agents",
+      { x: 2, y: 5.6, w: W - 4, h: 0.5, align: "center", fontFace: MONO, fontSize: 12, color: FAINT });
+    s.addText("open  /gallery  on the projector",
+      { x: 2, y: 6.4, w: W - 4, h: 0.5, align: "center", fontFace: MONO, fontSize: 13, color: INDIGO });
+    s.addNotes("Put the gallery on the projector and just let the room look for a few seconds. Do not talk over it. Then: 'Every one of these has its own name, its own artwork, its own colours, its own copy, and its own honest criticism. Same seven agents, run once per idea, on one laptop, while I was busy talking.' Point out one or two of the funnier ones by name. Let people find theirs.");
   }
 
   // =============================================== 24 CLOSE + QR

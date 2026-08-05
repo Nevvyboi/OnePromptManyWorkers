@@ -9,9 +9,29 @@ workers (Copywriter, Designer, Builder, Skeptic) that build one thing on stage.
 
 ## The spider net
 
-The crew is not a pipeline, it is a web. Agents run in parallel, and when one
-finishes it helps another. The stage draws this live as a graph whose edges pulse
-as work flows across them.
+Seven agents, not a pipeline. They run in parallel, and when one finishes it helps
+another. The stage draws this live as a graph whose edges pulse as work flows.
+
+| Agent | Job |
+|---|---|
+| **Namer** | invents the product name |
+| **Copywriter** | writes the headline, subhead and features |
+| **Designer** | picks the colours and type |
+| **Illustrator** | draws the hero artwork (SVG, no image files) |
+| **Builder** | assembles the page |
+| **Reviewer** | sends back one concrete polish |
+| **Skeptic** | asks the hard question |
+
+Two edges run *backwards*: the Reviewer's polish and the Skeptic's critique both
+return to the Copywriter, who rewrites live on the projector.
+
+## Background builds and the closing gallery
+
+The queue is not idle. A scheduled job builds one waiting idea at a time, with no
+stage events, so pages pile up quietly **while you are talking**. At the end, put
+`/gallery` on the projector: a wall of every attendee's finished page, credited by
+name. Turn it off with `--live.background=false` if you would rather build only on
+demand.
 
 ```
               [ copy ]
@@ -43,6 +63,8 @@ including going backwards. A net, not a line.
 | `http://<laptop-ip>:8080/` | audience phones (the QR) | submit an idea |
 | `http://localhost:8080/stage` | the projector | the crew + the page building live |
 | `http://localhost:8080/control?key=…` | you | the QR, the queue, the Run button (key printed in your terminal) |
+| `http://localhost:8080/join` | the projector, early on | a full-screen QR to get people submitting |
+| `http://localhost:8080/gallery` | the projector, at the end | every page the crew built while you talked |
 
 ## Before the talk
 

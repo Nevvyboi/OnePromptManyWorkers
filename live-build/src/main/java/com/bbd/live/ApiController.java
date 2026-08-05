@@ -58,6 +58,10 @@ public class ApiController {
         return ResponseEntity.ok(crew.run(id));
     }
 
+    /** The closing reveal: everything the crew built while the talk was going. */
+    @GetMapping("/gallery")
+    public Map<String, Object> gallery() { return crew.galleryPayload(); }
+
     @GetMapping("/events")
     public SseEmitter events() { return crew.subscribe(); }
 

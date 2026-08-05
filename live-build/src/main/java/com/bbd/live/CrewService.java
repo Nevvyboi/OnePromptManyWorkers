@@ -61,6 +61,9 @@ public class CrewService {
     private Agents.Copywriter copywriter;
     private Agents.Designer designer;
     private Agents.Skeptic skeptic;
+    private Agents.Namer namer;
+    private Agents.Illustrator illustrator;
+    private Agents.Reviewer reviewer;
 
     // ---------- audience + presenter API ----------
 
@@ -152,6 +155,7 @@ public class CrewService {
         em.onError(e -> emitters.remove(em));
         send(em, "info", Map.of("mock", mock, "tally", queue.size()));
         send(em, "queue", queuePayload());
+        send(em, "gallery", galleryPayload());
         return em;
     }
 
@@ -164,36 +168,66 @@ public class CrewService {
     // Copywriter, who revises the headline live. That feedback edge is what
     // makes it a net.
 
-    private final ExecutorService pool = Executors.newFixedThreadPool(2);
+    private final ExecutorService pool = Executors.newFixedThreadPool(3);
+    @Value("${live.background:true}") boolean backgroundBuilds;
+
+    private static final List<Map<String, String>> CREW = List.of(
+            Map.of("key", "namer", "label", "name"),
+            Map.of("key", "copywriter", "label", "copy"),
+            Map.of("key", "designer", "label", "design"),
+            Map.of("key", "illustrator", "label", "art"),
+            Map.of("key", "builder", "label", "build"),
+            Map.of("key", "reviewer", "label", "review"),
+            Map.of("key", "skeptic", "label", "skeptic"));
 
     private void runCrew(Idea idea) throws Exception {
         broadcast("run-start", Map.of("id", idea.id, "idea", idea.text, "name", idea.name));
-        sleep(450);
-        broadcast("graph", Map.of(
-                "nodes", List.of(
-                        node("copywriter", "copy"), node("designer", "design"),
-                        node("builder", "build"), node("skeptic", "skeptic")),
-                "edges", List.of(
-                        edge("designer", "copywriter", false),
-                        edge("copywriter", "builder", false),
-                        edge("designer", "builder", false),
-                        edge("builder", "skeptic", false),
-                        edge("skeptic", "copywriter", true))));
-        sleep(400);
+        sleep(420);
+        broadcast("graph", Map.of("nodes", CREW, "edges", List.of(
+                edge("namer", "copywriter", false),
+                edge("namer", "illustrator", false),
+                edge("designer", "copywriter", false),
+                edge("designer", "illustrator", false),
+                edge("copywriter", "builder", false),
+                edge("designer", "builder", false),
+                edge("illustrator", "builder", false),
+                edge("builder", "reviewer", false),
+                edge("builder", "skeptic", false),
+                edge("reviewer", "copywriter", true),
+                edge("skeptic", "copywriter", true))));
+        sleep(380);
 
-        // round 1: two agents in parallel
-        broadcast("agent-state", Map.of("key", "copywriter", "state", "working", "note", "drafting the hero…"));
+        // round one: three agents at once
+        broadcast("agent-state", Map.of("key", "namer", "state", "working", "note", "inventing a name…"));
         broadcast("agent-state", Map.of("key", "designer", "state", "working", "note", "choosing a palette…"));
-        Future<Copy> copyF = pool.submit(() -> safeCopy(idea.text));
+        broadcast("agent-state", Map.of("key", "copywriter", "state", "working", "note", "drafting the hero…"));
+        Future<String> nameF = pool.submit(() -> safeName(idea.text));
         Future<Palette> paletteF = pool.submit(() -> safePalette(idea.text));
+        Future<Copy> copyF = pool.submit(() -> safeCopy(idea.text));
 
-        // the designer's little job lands first; it applies, then assists
+        // the namer is the smallest job, so it lands first and helps two others
+        Product product = new Product(nameF.get(), "");
+        broadcast("worker-done", Map.of("key", "namer", "payload", product));
+        broadcast("agent-state", Map.of("key", "namer", "state", "assisting", "note", "done first, so it helps"));
+        broadcast("flow", Map.of("from", "namer", "to", "copywriter", "what", "the name"));
+        broadcast("flow", Map.of("from", "namer", "to", "illustrator", "what", "the name"));
+        sleep(500);
+        broadcast("agent-state", Map.of("key", "namer", "state", "done"));
+
         Palette palette = paletteF.get();
         broadcast("worker-done", Map.of("key", "designer", "payload", palette));
-        broadcast("agent-state", Map.of("key", "designer", "state", "assisting", "note", "done early, so it helps: sends the copywriter a tone hint"));
+        broadcast("agent-state", Map.of("key", "designer", "state", "assisting", "note", "hands the illustrator its colours"));
         broadcast("flow", Map.of("from", "designer", "to", "copywriter", "what", "tone hint"));
-        sleep(600);
+        broadcast("flow", Map.of("from", "designer", "to", "illustrator", "what", "palette"));
+        sleep(500);
         broadcast("agent-state", Map.of("key", "designer", "state", "done"));
+
+        // the illustrator could only start once it had a name and colours
+        broadcast("agent-state", Map.of("key", "illustrator", "state", "working", "note", "drawing the hero artwork…"));
+        Art art = safeArt(idea.text, palette);
+        broadcast("worker-done", Map.of("key", "illustrator", "payload", art));
+        broadcast("agent-state", Map.of("key", "illustrator", "state", "done", "note", "artwork ready"));
+        broadcast("flow", Map.of("from", "illustrator", "to", "builder", "what", "artwork"));
 
         Copy copy = copyF.get();
         broadcast("worker-done", Map.of("key", "copywriter", "payload", copy));
@@ -204,25 +238,77 @@ public class CrewService {
         broadcast("agent-state", Map.of("key", "builder", "state", "working", "note", "assembling the page…"));
         sleep(800);
         broadcast("worker-done", Map.of("key", "builder"));
-        broadcast("agent-state", Map.of("key", "builder", "state", "done", "note", "page assembled, 3 sections"));
+        broadcast("agent-state", Map.of("key", "builder", "state", "done", "note", "page assembled"));
 
+        // two checkers read the finished page together
+        broadcast("flow", Map.of("from", "builder", "to", "reviewer", "what", "the page"));
         broadcast("flow", Map.of("from", "builder", "to", "skeptic", "what", "the page"));
+        broadcast("agent-state", Map.of("key", "reviewer", "state", "working", "note", "checking it over…"));
         broadcast("agent-state", Map.of("key", "skeptic", "state", "working", "note", "poking holes…"));
+        Future<String> polishF = pool.submit(() -> safePolish(idea.text, copy.cta()));
         String note = safeSkeptic(idea.text);
+
+        String polished = polishF.get();
+        Review review = new Review("one thing to sharpen", "cta", polished, "the call to action was generic");
+        broadcast("worker-done", Map.of("key", "reviewer", "payload", review));
+        broadcast("agent-state", Map.of("key", "reviewer", "state", "done", "note", review.note()));
+        broadcast("flow", Map.of("from", "reviewer", "to", "copywriter", "what", "polish the cta"));
+        broadcast("agent-state", Map.of("key", "copywriter", "state", "working", "note", "taking the reviewer's note…"));
+        sleep(700);
+        broadcast("revise", Map.of("field", "cta", "value", polished, "by", "reviewer"));
+
         broadcast("worker-done", Map.of("key", "skeptic", "payload", Map.of("note", note)));
         broadcast("agent-state", Map.of("key", "skeptic", "state", "done"));
-
-        // the net closes: critique flows back, the copywriter revises live
         broadcast("flow", Map.of("from", "skeptic", "to", "copywriter", "what", "critique"));
-        broadcast("agent-state", Map.of("key", "copywriter", "state", "working", "note", "takes the critique, revising the hero…"));
+        sleep(700);
         String revised = safeRevise(idea.text, copy.headline(), note);
-        broadcast("revise", Map.of("field", "headline", "value", revised, "by", "copywriter"));
+        broadcast("revise", Map.of("field", "headline", "value", revised, "by", "skeptic"));
         broadcast("flow", Map.of("from", "copywriter", "to", "builder", "what", "revised hero"));
-        broadcast("agent-state", Map.of("key", "copywriter", "state", "done", "note", "headline revised. the web is settled"));
+        broadcast("agent-state", Map.of("key", "copywriter", "state", "done", "note", "rewritten. the web is settled"));
 
+        Copy finalCopy = new Copy(copy.badge(), revised, copy.subhead(), polished, copy.features());
+        idea.result = new Result(product, palette, finalCopy, art, review, note);
         idea.status = "done";
         broadcast("run-done", Map.of("id", idea.id));
         broadcast("queue", queuePayload());
+        broadcast("gallery", galleryPayload());
+    }
+
+    // ---------- quiet background builds, while the talk is happening ----------
+
+    /** Builds one waiting idea at a time, with no stage events, so the gallery
+     *  fills up during the talk without anyone seeing it happen. */
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 4000, initialDelay = 6000)
+    public void backgroundTick() {
+        if (running || !backgroundBuilds) return;
+        Idea next = queue.stream().filter(i -> !i.hidden && i.result == null).findFirst().orElse(null);
+        if (next == null) return;
+        try {
+            Product product = new Product(safeName(next.text), "");
+            Palette palette = safePalette(next.text);
+            Copy copy = safeCopy(next.text);
+            Art art = safeArt(next.text, palette);
+            String note = safeSkeptic(next.text);
+            String polished = safePolish(next.text, copy.cta());
+            String revised = safeRevise(next.text, copy.headline(), note);
+            Copy finalCopy = new Copy(copy.badge(), revised, copy.subhead(), polished, copy.features());
+            next.result = new Result(product, palette, finalCopy, art,
+                    new Review("one thing to sharpen", "cta", polished, "the call to action was generic"), note);
+            next.status = "built";
+            broadcast("queue", queuePayload());
+            broadcast("gallery", galleryPayload());
+        } catch (Exception e) {
+            System.out.println("  (background build skipped: " + e.getMessage() + ")");
+        }
+    }
+
+    public Map<String, Object> galleryPayload() {
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (Idea i : queue) {
+            if (i.hidden || i.result == null) continue;
+            items.add(Map.of("id", i.id, "name", i.name, "idea", i.text, "result", i.result));
+        }
+        return Map.of("total", items.size(), "items", items);
     }
 
     private Map<String, String> node(String key, String label) { return Map.of("key", key, "label", label); }
@@ -240,6 +326,9 @@ public class CrewService {
         copywriter = AiServices.create(Agents.Copywriter.class, model);
         designer = AiServices.create(Agents.Designer.class, model);
         skeptic = AiServices.create(Agents.Skeptic.class, model);
+        namer = AiServices.create(Agents.Namer.class, model);
+        illustrator = AiServices.create(Agents.Illustrator.class, model);
+        reviewer = AiServices.create(Agents.Reviewer.class, model);
     }
 
     private Copy safeCopy(String idea) throws InterruptedException {
@@ -258,6 +347,54 @@ public class CrewService {
             catch (RuntimeException e) { vibe = null; }
         } else { sleep(1200); vibe = null; }
         return paletteFor(vibe, idea);
+    }
+
+    private String safeName(String idea) throws InterruptedException {
+        if (!mock) {
+            try { ensureAgents();
+                String n = namer.name(idea);
+                if (n != null && !n.isBlank()) {
+                    n = n.strip().replaceAll("[^A-Za-z]", "");
+                    if (n.length() >= 3) return n.substring(0, 1).toUpperCase() + n.substring(1, Math.min(n.length(), 14));
+                }
+            } catch (RuntimeException e) { /* house name below */ }
+        } else sleep(700);
+        return cannedName(idea);
+    }
+
+    private Art safeArt(String idea, Palette palette) throws InterruptedException {
+        String kind = null;
+        if (!mock) {
+            try { ensureAgents(); kind = illustrator.style(idea); }
+            catch (RuntimeException e) { /* house art below */ }
+        } else sleep(900);
+        List<String> kinds = List.of("blobs", "rings", "waves", "grid", "burst");
+        String k = kind == null ? null : kind.strip().toLowerCase().replaceAll("[^a-z]", "");
+        if (k == null || !kinds.contains(k)) k = kinds.get(Math.floorMod(idea.hashCode() * 31, kinds.size()));
+        return new Art(k, Math.floorMod(idea.hashCode(), 997), List.of(palette.primary(), palette.accent()));
+    }
+
+    private String safePolish(String idea, String currentCta) throws InterruptedException {
+        if (!mock) {
+            try { ensureAgents();
+                String p = reviewer.polish(idea, currentCta);
+                if (p != null && !p.isBlank()) return p.strip().replaceAll("^\"|\"$", "");
+            } catch (RuntimeException e) { /* house polish below */ }
+        } else sleep(800);
+        String[] options = {"Try it in 30 seconds", "Get it working today", "See it in action",
+                "Take it for a spin", "Start free, no card", "Let it do the remembering"};
+        return pick(options, idea + "pol");
+    }
+
+    private String cannedName(String idea) {
+        String[] w = idea.replaceAll("(?i)^an?\\s+", "").split("[^A-Za-z]+");
+        String a = w.length > 0 && w[0].length() > 2 ? w[0] : "Nova";
+        String b = w.length > 1 && w[1].length() > 2 ? w[1] : "Kit";
+        String A = a.substring(0, 1).toUpperCase() + a.substring(1).toLowerCase();
+        String B = b.substring(0, 1).toUpperCase() + b.substring(1).toLowerCase();
+        String[] forms = { A + "ly", A + "r", A + "Kit", B + "Hub",
+                A.substring(0, Math.min(4, A.length())) + B.substring(0, Math.min(4, B.length())), A + "Wise" };
+        return pick(forms, idea + "nm");
     }
 
     private String safeRevise(String idea, String headline, String critique) throws InterruptedException {

@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Configuration;
  * token runs on this laptop through Ollama. Nothing leaves the room.
  */
 @SpringBootApplication
+@org.springframework.scheduling.annotation.EnableScheduling
 public class LiveApplication {
     public static void main(String[] args) {
         SpringApplication.run(LiveApplication.class, args);
@@ -25,6 +26,7 @@ public class LiveApplication {
         @Override public void addViewControllers(ViewControllerRegistry r) {
             r.addViewController("/stage").setViewName("forward:/stage.html");
             r.addViewController("/join").setViewName("forward:/join.html");
+            r.addViewController("/gallery").setViewName("forward:/gallery.html");
             // /control is gated below, so it is not a plain forward
         }
     }

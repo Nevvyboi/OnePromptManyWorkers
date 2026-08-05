@@ -87,7 +87,8 @@
   .sec{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
   .sec.in{opacity:1;transform:none}
   .hero h1{font-weight:800;font-size:clamp(2rem,4.4vw,3.4rem);line-height:1.05;letter-spacing:-.02em;max-width:20ch;border-radius:8px}
-  .hero h1.flash{animation:flash 1.6s ease}
+  .hero h1.flash,.hero .cta.flash{animation:flash 1.6s ease}
+  .pname{font-family:var(--mono);font-size:.8rem;letter-spacing:.22em;text-transform:uppercase;color:var(--pg-accent);margin-bottom:.5rem}
   @keyframes flash{0%{background:rgba(245,165,36,0)}18%{background:rgba(245,165,36,.45)}100%{background:transparent}}
   .rev-tag{display:inline-block;font-family:var(--mono);font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:var(--pg-primary);border:1px dashed var(--pg-primary);border-radius:16px;padding:.22rem .7rem;margin-top:.7rem;opacity:0;transition:opacity .5s}
   .rev-tag.show{opacity:1}
@@ -159,13 +160,17 @@
 
 <script>
   const NS = "http://www.w3.org/2000/svg";
-  const COLORS = { copywriter:"#2DD4BF", designer:"#8B5CF6", builder:"#38BDF8", skeptic:"#FB7185" };
+  const COLORS = { namer:"#F5A524", copywriter:"#2DD4BF", designer:"#8B5CF6", illustrator:"#F472B6",
+                   builder:"#38BDF8", reviewer:"#A3E635", skeptic:"#FB7185" };
   // what each agent is for, in plain words, so the room understands the crew
   const JOBS = {
-    copywriter: { label: "copy",    name: "Copywriter", job: "writes the words" },
-    designer:   { label: "design",  name: "Designer",   job: "picks the colours and type" },
-    builder:    { label: "build",   name: "Builder",    job: "assembles the page" },
-    skeptic:    { label: "skeptic", name: "Skeptic",    job: "finds the flaw" },
+    namer:       { label: "name",    name: "Namer",       job: "invents the product name" },
+    copywriter:  { label: "copy",    name: "Copywriter",  job: "writes the words" },
+    designer:    { label: "design",  name: "Designer",    job: "picks the colours and type" },
+    illustrator: { label: "art",     name: "Illustrator", job: "draws the hero artwork" },
+    builder:     { label: "build",   name: "Builder",     job: "assembles the page" },
+    reviewer:    { label: "review",  name: "Reviewer",    job: "polishes what is weak" },
+    skeptic:     { label: "skeptic", name: "Skeptic",     job: "finds the flaw" },
   };
   const web = document.getElementById("web"), crewEl = document.getElementById("crew"), pg = document.getElementById("pg");
   let pageState = null, nodePos = {}, edgeIds = {};
@@ -184,12 +189,14 @@
   }
 
   // ---------- the web graph ----------
-  const FIXED = { copywriter:[200,52], designer:[58,150], builder:[342,150], skeptic:[200,248] };
-  const R = 26, C = [200,150];
+  const R = 24, C = [200,150], RING = 112;
 
   function drawGraph(nodes, edges){
     web.innerHTML = ""; nodePos = {}; edgeIds = {};
-    nodes.forEach((n,i)=>{ nodePos[n.key] = FIXED[n.key] || [C[0]+140*Math.cos(2*Math.PI*i/nodes.length-Math.PI/2), C[1]+110*Math.sin(2*Math.PI*i/nodes.length-Math.PI/2)]; });
+    nodes.forEach((n,i)=>{
+      const a = 2*Math.PI*i/nodes.length - Math.PI/2;
+      nodePos[n.key] = [C[0] + RING*1.5*Math.cos(a), C[1] + RING*Math.sin(a)];
+    });
     edges.forEach(e=>{
       const a = nodePos[e.from], b = nodePos[e.to]; if(!a||!b) return;
       const mid = [(a[0]+b[0])/2,(a[1]+b[1])/2];
@@ -275,7 +282,8 @@
     document.getElementById("waiting")?.remove();
     pageState = document.createElement("div");
     pageState.innerHTML = `
-      <div class="sec hero" id="s-hero"><span class="badge" id="p-badge">new</span><h1 id="p-head"></h1><br><span class="rev-tag" id="p-rev">revised after the skeptic's critique</span><div class="subh" id="p-sub"></div><span class="cta" id="p-cta"></span></div>
+      <div class="sec" id="s-art"></div>
+      <div class="sec hero" id="s-hero"><div class="pname" id="p-name"></div><span class="badge" id="p-badge">new</span><h1 id="p-head"></h1><br><span class="rev-tag" id="p-rev">revised after the skeptic's critique</span><div class="subh" id="p-sub"></div><span class="cta" id="p-cta"></span></div>
       <div class="sec feats" id="s-feats"></div>
       <div class="sec skeptic" id="s-skeptic" style="display:none"><b>the skeptic says</b><span id="p-skeptic"></span></div>`;
     pg.appendChild(pageState);
@@ -302,12 +310,34 @@
     for (const [k,v] of [["bg",d.bg],["surface",d.surface],["ink",d.ink],["muted",d.muted],["primary",d.primary],["accent",d.accent],["font",d.font]])
       if (v) s.setProperty("--pg-"+k, v);
   }
+  function applyName(n){
+    ensurePage();
+    const el = document.getElementById("p-name");
+    if (el && n && n.name){ el.textContent = n.name; el.classList.add("in"); }
+  }
+  function applyArt(a){
+    ensurePage();
+    const host = document.getElementById("s-art"); if(!host || !a) return;
+    const [c1,c2] = a.colors || ["#F5A524","#38BDF8"];
+    const sd = a.seed || 7, r = n => ((sd*(n+3)*9301 + 49297) % 233280) / 233280;
+    let inner = "";
+    if (a.kind === "rings") inner = [0,1,2,3,4].map(i=>`<circle cx="${60+i*90}" cy="60" r="${18+r(i)*30}" fill="none" stroke="${i%2?c2:c1}" stroke-width="5" opacity=".9"/>`).join("");
+    else if (a.kind === "waves") inner = [0,1,2].map(i=>`<path d="M0 ${35+i*22} Q 110 ${8+r(i)*60} 220 ${35+i*22} T 460 ${35+i*22}" fill="none" stroke="${i%2?c2:c1}" stroke-width="5" opacity=".85"/>`).join("");
+    else if (a.kind === "grid") inner = Array.from({length:24},(_,i)=>`<rect x="${(i%12)*38+8}" y="${Math.floor(i/12)*56+8}" width="30" height="44" rx="6" fill="${r(i)>.5?c1:c2}" opacity="${.3+r(i)*.65}"/>`).join("");
+    else if (a.kind === "burst") inner = Array.from({length:16},(_,i)=>`<line x1="230" y1="60" x2="${230+Math.cos(i/16*6.28)*(70+r(i)*140)}" y2="${60+Math.sin(i/16*6.28)*(24+r(i)*40)}" stroke="${i%2?c1:c2}" stroke-width="4.5" opacity=".8"/>`).join("") + `<circle cx="230" cy="60" r="15" fill="${c1}"/>`;
+    else inner = [0,1,2,3,4].map(i=>`<ellipse cx="${55+i*95}" cy="${60+(r(i)-.5)*46}" rx="${34+r(i)*32}" ry="${23+r(i)*20}" fill="${i%2?c1:c2}" opacity=".55"/>`).join("");
+    host.innerHTML = `<svg viewBox="0 0 460 120" style="width:100%;max-height:120px;display:block;margin-bottom:1.2rem">${inner}</svg>`;
+    show("s-art");
+  }
   function applySkeptic(t){ ensurePage(); document.getElementById("p-skeptic").textContent=t; show("s-skeptic"); }
   function applyRevise(r){
-    const h = document.getElementById("p-head"); if(!h) return;
-    h.classList.remove("flash"); void h.offsetWidth;
-    h.textContent = r.value; h.classList.add("flash");
-    document.getElementById("p-rev").classList.add("show");
+    const id = r.field === "cta" ? "p-cta" : "p-head";
+    const el = document.getElementById(id); if(!el) return;
+    el.classList.remove("flash"); void el.offsetWidth;
+    el.textContent = r.value; el.classList.add("flash");
+    const tag = document.getElementById("p-rev");
+    tag.textContent = r.by === "reviewer" ? "polished after the reviewer's note" : "revised after the skeptic's critique";
+    tag.classList.add("show");
   }
 
   function resetStage(idea, name){
@@ -337,6 +367,8 @@
   });
   es.addEventListener("worker-done", e => {
     const d=J(e);
+    if(d.key==="namer" && d.payload) applyName(d.payload);
+    if(d.key==="illustrator" && d.payload) applyArt(d.payload);
     if(d.key==="copywriter" && d.payload) applyCopy(d.payload);
     if(d.key==="designer" && d.payload) applyDesign(d.payload);
     if(d.key==="skeptic" && d.payload) applySkeptic(d.payload.note || d.payload);
