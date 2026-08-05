@@ -86,11 +86,26 @@ laptop; the data plan only creates the network.
 > The `/control` and `/join` pages show the exact QR and URL, auto-detected from whatever
 > network you are on. No editing needed.
 
-**2. The model (for the real thing).**
+**2. The models (for the real thing).** Two, on purpose: the stage crew gets the
+better model because the room is watching, and the background queue gets a
+smaller one so it can never slow your live run down.
+
 ```bash
-ollama pull qwen2.5:3b
-ollama run qwen2.5:3b "hi"   # warm it up
+ollama pull qwen2.5:3b     # the stage crew
+ollama pull qwen2.5:1.5b   # the background queue
+ollama run qwen2.5:3b "hi" # warm the big one
 ```
+
+Both are configurable:
+
+```
+live.model=qwen2.5:3b              # what the projector sees
+live.backgroundModel=qwen2.5:1.5b  # what fills the gallery while you talk
+live.background=false              # or turn background building off entirely
+```
+
+Background builds also pause completely while a stage run is in flight, so the
+live one always wins.
 
 **3. Rehearse in mock mode first** (no Ollama, instant, canned outputs):
 ```bash

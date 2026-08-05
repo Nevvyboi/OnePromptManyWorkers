@@ -32,6 +32,8 @@ public class CrewService {
 
     @Value("${live.mock:false}") boolean mock;
     @Value("${live.model:qwen2.5:3b}") String modelName;
+    /** The background queue uses a smaller model so the on-stage run always wins. */
+    @Value("${live.backgroundModel:qwen2.5:1.5b}") String backgroundModelName;
     @Value("${live.ollama:http://localhost:11434}") String ollamaUrl;
 
     private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
@@ -57,14 +59,13 @@ public class CrewService {
             "toilet", "poo", "poop", "turd", "fart", "genital", "penis", "vagina",
             "boob", "nude", "naked", "porn", "sex", "orgasm", "nipple", "butthole", "anus");
 
-    // lazily built on the first live run
-    private Agents.Copywriter copywriter;
-    private Agents.Designer designer;
-    private Agents.Skeptic skeptic;
-    private Agents.Namer namer;
-    private Agents.Illustrator illustrator;
-    private Agents.Reviewer reviewer;
-    private Agents.Pricer pricer;
+    /** One model wearing seven hats. Two of these exist: the stage crew on the
+     *  good model, and a quicker crew on a smaller one for background work. */
+    private static final class Bundle {
+        Agents.Copywriter copywriter; Agents.Designer designer; Agents.Skeptic skeptic;
+        Agents.Namer namer; Agents.Illustrator illustrator; Agents.Reviewer reviewer; Agents.Pricer pricer;
+    }
+    private Bundle stageCrew, fastCrew;
 
     // ---------- audience + presenter API ----------
 
@@ -205,9 +206,9 @@ public class CrewService {
         broadcast("agent-state", Map.of("key", "namer", "state", "working", "note", "inventing a name…"));
         broadcast("agent-state", Map.of("key", "designer", "state", "working", "note", "choosing a palette…"));
         broadcast("agent-state", Map.of("key", "copywriter", "state", "working", "note", "drafting the hero…"));
-        Future<String> nameF = pool.submit(() -> safeName(idea.text));
-        Future<Palette> paletteF = pool.submit(() -> safePalette(idea.text));
-        Future<Copy> copyF = pool.submit(() -> safeCopy(idea.text));
+        Future<String> nameF = pool.submit(() -> safeName(stage(), idea.text));
+        Future<Palette> paletteF = pool.submit(() -> safePalette(stage(), idea.text));
+        Future<Copy> copyF = pool.submit(() -> safeCopy(stage(), idea.text));
 
         // the namer is the smallest job, so it lands first and helps two others
         Product product = new Product(nameF.get(), "");
@@ -229,13 +230,13 @@ public class CrewService {
 
         // the illustrator could only start once it had a name and colours
         broadcast("agent-state", Map.of("key", "illustrator", "state", "working", "note", "drawing the hero artwork…"));
-        Art art = safeArt(idea.text, palette);
+        Art art = safeArt(stage(), idea.text, palette);
         broadcast("worker-done", Map.of("key", "illustrator", "payload", art));
         broadcast("agent-state", Map.of("key", "illustrator", "state", "done", "note", "artwork ready"));
         broadcast("flow", Map.of("from", "illustrator", "to", "builder", "what", "artwork"));
 
         broadcast("agent-state", Map.of("key", "pricer", "state", "working", "note", "working out three tiers…"));
-        List<Tier> pricingLive = safePricing(idea.text, product.name());
+        List<Tier> pricingLive = safePricing(stage(), idea.text, product.name());
         broadcast("worker-done", Map.of("key", "pricer", "payload", Map.of("pricing", pricingLive)));
         broadcast("agent-state", Map.of("key", "pricer", "state", "done", "note", "three tiers, one featured"));
         broadcast("flow", Map.of("from", "pricer", "to", "builder", "what", "pricing"));
@@ -256,8 +257,8 @@ public class CrewService {
         broadcast("flow", Map.of("from", "builder", "to", "skeptic", "what", "the page"));
         broadcast("agent-state", Map.of("key", "reviewer", "state", "working", "note", "checking it over…"));
         broadcast("agent-state", Map.of("key", "skeptic", "state", "working", "note", "poking holes…"));
-        Future<String> polishF = pool.submit(() -> safePolish(idea.text, copy.cta()));
-        String note = safeSkeptic(idea.text);
+        Future<String> polishF = pool.submit(() -> safePolish(stage(), idea.text, copy.cta()));
+        String note = safeSkeptic(stage(), idea.text);
 
         String polished = polishF.get();
         Review review = new Review("one thing to sharpen", "cta", polished, "the call to action was generic");
@@ -272,14 +273,14 @@ public class CrewService {
         broadcast("agent-state", Map.of("key", "skeptic", "state", "done"));
         broadcast("flow", Map.of("from", "skeptic", "to", "copywriter", "what", "critique"));
         sleep(700);
-        String revised = safeRevise(idea.text, copy.headline(), note);
+        String revised = safeRevise(stage(), idea.text, copy.headline(), note);
         broadcast("revise", Map.of("field", "headline", "value", revised, "by", "skeptic"));
         broadcast("flow", Map.of("from", "copywriter", "to", "builder", "what", "revised hero"));
         broadcast("agent-state", Map.of("key", "copywriter", "state", "done", "note", "rewritten. the web is settled"));
 
         Copy finalCopy = new Copy(copy.badge(), revised, copy.subhead(), polished, copy.features());
         idea.result = new Result(product, palette, finalCopy, art, review,
-                safePricing(idea.text, product.name()), buildFaq(idea.text), note);
+                safePricing(stage(), idea.text, product.name()), buildFaq(idea.text), note);
         idea.status = "done";
         broadcast("run-done", Map.of("id", idea.id));
         broadcast("queue", queuePayload());
@@ -296,17 +297,17 @@ public class CrewService {
         Idea next = queue.stream().filter(i -> !i.hidden && i.result == null).findFirst().orElse(null);
         if (next == null) return;
         try {
-            Product product = new Product(safeName(next.text), "");
-            Palette palette = safePalette(next.text);
-            Copy copy = safeCopy(next.text);
-            Art art = safeArt(next.text, palette);
-            String note = safeSkeptic(next.text);
-            String polished = safePolish(next.text, copy.cta());
-            String revised = safeRevise(next.text, copy.headline(), note);
+            Product product = new Product(safeName(fast(), next.text), "");
+            Palette palette = safePalette(fast(), next.text);
+            Copy copy = safeCopy(fast(), next.text);
+            Art art = safeArt(fast(), next.text, palette);
+            String note = safeSkeptic(fast(), next.text);
+            String polished = safePolish(fast(), next.text, copy.cta());
+            String revised = safeRevise(fast(), next.text, copy.headline(), note);
             Copy finalCopy = new Copy(copy.badge(), revised, copy.subhead(), polished, copy.features());
             next.result = new Result(product, palette, finalCopy, art,
                     new Review("one thing to sharpen", "cta", polished, "the call to action was generic"),
-                    safePricing(next.text, product.name()), buildFaq(next.text), note);
+                    safePricing(fast(), next.text, product.name()), buildFaq(next.text), note);
             next.status = "built";
             broadcast("queue", queuePayload());
             broadcast("gallery", galleryPayload());
@@ -331,42 +332,55 @@ public class CrewService {
 
     // ---------- agents with fallbacks ----------
 
-    private synchronized void ensureAgents() {
-        if (copywriter != null) return;
+    private Bundle build(String which) {
         ChatLanguageModel model = OllamaChatModel.builder()
-                .baseUrl(ollamaUrl).modelName(modelName)
+                .baseUrl(ollamaUrl).modelName(which)
                 .temperature(0.6).timeout(Duration.ofMinutes(2)).build();
-        copywriter = AiServices.create(Agents.Copywriter.class, model);
-        designer = AiServices.create(Agents.Designer.class, model);
-        skeptic = AiServices.create(Agents.Skeptic.class, model);
-        namer = AiServices.create(Agents.Namer.class, model);
-        illustrator = AiServices.create(Agents.Illustrator.class, model);
-        reviewer = AiServices.create(Agents.Reviewer.class, model);
-        pricer = AiServices.create(Agents.Pricer.class, model);
+        Bundle b = new Bundle();
+        b.copywriter = AiServices.create(Agents.Copywriter.class, model);
+        b.designer = AiServices.create(Agents.Designer.class, model);
+        b.skeptic = AiServices.create(Agents.Skeptic.class, model);
+        b.namer = AiServices.create(Agents.Namer.class, model);
+        b.illustrator = AiServices.create(Agents.Illustrator.class, model);
+        b.reviewer = AiServices.create(Agents.Reviewer.class, model);
+        b.pricer = AiServices.create(Agents.Pricer.class, model);
+        return b;
     }
 
-    private Copy safeCopy(String idea) throws InterruptedException {
+    /** The crew on stage. Best model, because the room is watching. */
+    private synchronized Bundle stage() {
+        if (stageCrew == null) stageCrew = build(modelName);
+        return stageCrew;
+    }
+
+    /** The crew working the queue in the background. Smaller model on purpose:
+     *  it must never slow down or starve the run happening on the projector. */
+    private synchronized Bundle fast() {
+        if (fastCrew == null) fastCrew = build(backgroundModelName);
+        return fastCrew;
+    }
+
+    private Copy safeCopy(Bundle crew, String idea) throws InterruptedException {
         if (!mock) {
-            try { ensureAgents(); Copy c = copywriter.write(idea);
+            try { Copy c = crew.copywriter.write(idea);
                 if (c != null && c.headline() != null && c.features() != null && !c.features().isEmpty()) return c;
             } catch (RuntimeException e) { System.out.println("  (copywriter improvised, using the house draft)"); }
         } else sleep(1400);
-        return cannedCopy(idea);
+        return cannedCopy(idea, null);
     }
 
-    private Palette safePalette(String idea) throws InterruptedException {
+    private Palette safePalette(Bundle crew, String idea) throws InterruptedException {
         String vibe;
         if (!mock) {
-            try { ensureAgents(); vibe = designer.vibe(idea); }
+            try { vibe = crew.designer.vibe(idea); }
             catch (RuntimeException e) { vibe = null; }
         } else { sleep(1200); vibe = null; }
         return paletteFor(vibe, idea);
     }
 
-    private String safeName(String idea) throws InterruptedException {
+    private String safeName(Bundle crew, String idea) throws InterruptedException {
         if (!mock) {
-            try { ensureAgents();
-                String n = namer.name(idea);
+            try { String n = crew.namer.name(idea);
                 if (n != null && !n.isBlank()) {
                     n = n.strip().replaceAll("[^A-Za-z]", "");
                     if (n.length() >= 3) return n.substring(0, 1).toUpperCase() + n.substring(1, Math.min(n.length(), 14));
@@ -376,10 +390,10 @@ public class CrewService {
         return cannedName(idea);
     }
 
-    private Art safeArt(String idea, Palette palette) throws InterruptedException {
+    private Art safeArt(Bundle crew, String idea, Palette palette) throws InterruptedException {
         String kind = null;
         if (!mock) {
-            try { ensureAgents(); kind = illustrator.style(idea); }
+            try { kind = crew.illustrator.style(idea); }
             catch (RuntimeException e) { /* house art below */ }
         } else sleep(900);
         List<String> kinds = List.of("blobs", "rings", "waves", "grid", "burst");
@@ -388,10 +402,9 @@ public class CrewService {
         return new Art(k, Math.floorMod(idea.hashCode(), 997), List.of(palette.primary(), palette.accent()));
     }
 
-    private String safePolish(String idea, String currentCta) throws InterruptedException {
+    private String safePolish(Bundle crew, String idea, String currentCta) throws InterruptedException {
         if (!mock) {
-            try { ensureAgents();
-                String p = reviewer.polish(idea, currentCta);
+            try { String p = crew.reviewer.polish(idea, currentCta);
                 if (p != null && !p.isBlank()) return p.strip().replaceAll("^\"|\"$", "");
             } catch (RuntimeException e) { /* house polish below */ }
         } else sleep(800);
@@ -400,20 +413,20 @@ public class CrewService {
         return pick(options, idea + "pol");
     }
 
-    private List<Tier> safePricing(String idea, String productName) throws InterruptedException {
+    private List<Tier> safePricing(Bundle crew, String idea, String productName) throws InterruptedException {
         String mid = null;
         if (!mock) {
-            try { ensureAgents(); mid = pricer.midPrice(idea); }
+            try { mid = crew.pricer.midPrice(idea); }
             catch (RuntimeException e) { /* house prices below */ }
         } else sleep(600);
         if (mid != null) { mid = mid.strip().replaceAll("[^R0-9]", ""); if (!mid.matches("R\\d{2,4}")) mid = null; }
         if (mid == null) mid = pick(new String[]{"R49", "R79", "R99", "R120"}, idea + "p1");
         int midV = Integer.parseInt(mid.substring(1));
         String top = "R" + Math.max(midV * 3, midV + 100);
-        String s = words(idea);
+        String s = topic(idea);
         return List.of(
                 new Tier("Starter", "Free", "forever",
-                        "Enough to see whether " + s + " is really your problem.",
+                        "Enough to find out whether " + s + " is really your problem.",
                         List.of("One device", "The basics, properly", "No card needed"), false),
                 new Tier("Everyday", mid, "per month",
                         "The one most people pick. " + productName + " on all your things.",
@@ -424,10 +437,9 @@ public class CrewService {
     }
 
     private List<Qa> buildFaq(String idea) {
-        String s = words(idea);
-        String short3 = s.split("\\s+").length > 3 ? String.join(" ", Arrays.copyOfRange(s.split("\\s+"), 0, 3)) : s;
+        String s = topic(idea);
         return List.of(
-                new Qa("Does it actually work for " + short3 + "?",
+                new Qa("Does it really work for " + s + "?",
                         "Yes, and it keeps working when you forget about it, which is the entire point."),
                 new Qa("Where does my data go?",
                         "Nowhere. It stays on your device. There is no cloud account and nothing to leak."),
@@ -437,6 +449,38 @@ public class CrewService {
 
     private static String words(String idea) {
         return idea.strip().replaceAll("[.\\s]+$", "").replaceFirst("(?i)^an?\\s+", "");
+    }
+
+    private static final Set<String> STOP = Set.of("that","which","who","when","where","so","and",
+            "but","for","to","with","if","because","while","after","before","from","by","of","in","on","at");
+    private static final Set<String> JUNK = Set.of("app","tool","tracker","finder","scanner","map",
+            "planner","timer","thing","system","kit");
+
+    /** An idea arrives as a whole sentence. Splicing that into every slot reads
+     *  like a machine wrote it, so take the short noun phrase at the front and
+     *  write around that plus the product name instead. */
+    private static String subject(String idea) {
+        List<String> out = new ArrayList<>();
+        for (String t : words(idea).split("\\s+")) {
+            if (STOP.contains(t.toLowerCase().replaceAll("[^a-z]", ""))) break;
+            out.add(t);
+            if (out.size() >= 4) break;
+        }
+        if (out.isEmpty()) for (String t : words(idea).split("\\s+")) { out.add(t); if (out.size() >= 3) break; }
+        return String.join(" ", out).replaceAll("[^\\w\\s-]", "").strip();
+    }
+
+    /** One or two words for what it is really about, for FAQ and feature lines. */
+    private static String topic(String idea) {
+        String[] parts = subject(idea).split("\\s+");
+        List<String> core = new ArrayList<>();
+        for (String x : parts) if (!JUNK.contains(x.toLowerCase())) core.add(x);
+        List<String> use = core.isEmpty() ? Arrays.asList(parts) : core;
+        return String.join(" ", use.subList(0, Math.min(2, use.size())));
+    }
+
+    private static String cap(String s) {
+        return s.isEmpty() ? s : s.substring(0, 1).toUpperCase() + s.substring(1);
     }
 
     /** The finished page for one idea, or null if the crew has not built it yet. */
@@ -460,11 +504,10 @@ public class CrewService {
         return pick(forms, idea + "nm");
     }
 
-    private String safeRevise(String idea, String headline, String critique) throws InterruptedException {
+    private String safeRevise(Bundle crew, String idea, String headline, String critique) throws InterruptedException {
         if (!mock) {
             try {
-                ensureAgents();
-                String s = copywriter.revise(idea, headline, critique);
+                String s = crew.copywriter.revise(idea, headline, critique);
                 if (s != null && !s.isBlank()) return s.strip().replaceAll("^\"|\"$", "");
             } catch (RuntimeException e) { System.out.println("  (revision improvised, using the house rewrite)"); }
         } else sleep(1200);
@@ -472,19 +515,20 @@ public class CrewService {
     }
 
     private String cannedRevise(String idea) {
-        String s = idea.strip().replaceAll("[.\\s]+$", "").replaceFirst("(?i)^an?\\s+", "");
-        String cap = s.substring(0, 1).toUpperCase() + s.substring(1);
+        String s = subject(idea), t = topic(idea);
         String[] options = {
-                cap + ". Zero effort, zero guilt.",
-                "Set it up once. Never think about it again.",
-                cap + ", minus the guesswork.",
-                "The lazy way to " + s + ". On purpose."};
+                cap(s) + ". Zero effort, zero guilt.",
+                "Set it once. It takes it from there.",
+                cap(s) + ", minus the guesswork.",
+                "The lazy way to handle " + t + ". On purpose.",
+                "Stop thinking about " + t + ".",
+                cap(s) + ", without the admin." };
         return pick(options, idea + "rev");
     }
 
-    private String safeSkeptic(String idea) throws InterruptedException {
+    private String safeSkeptic(Bundle crew, String idea) throws InterruptedException {
         if (!mock) {
-            try { ensureAgents(); String s = skeptic.critique(idea); if (s != null && !s.isBlank()) return s.strip(); }
+            try { String s = crew.skeptic.critique(idea); if (s != null && !s.isBlank()) return s.strip(); }
             catch (RuntimeException e) { /* fall through */ }
         } else sleep(1000);
         return cannedSkeptic(idea);
@@ -495,23 +539,36 @@ public class CrewService {
     private static final String[] BADGES = {"introducing", "new", "meet", "now live"};
     private static final String[] CTAS = {"Get early access", "Start free", "Join the waitlist", "Try it now"};
 
-    private Copy cannedCopy(String idea) {
-        String clean = idea.strip().replaceAll("[.\\s]+$", "");
-        String stripped = clean.replaceFirst("(?i)^an?\\s+", "");
-        String Title = clean.substring(0, 1).toUpperCase() + clean.substring(1);
+    private Copy cannedCopy(String idea) { return cannedCopy(idea, null); }
+
+    private Copy cannedCopy(String idea, String productName) {
+        String s = subject(idea), t = topic(idea);
+        String P = productName == null || productName.isBlank() ? cap(s) : productName;
+        String[] heads = {
+                cap(s) + ", finally done properly.",
+                P + ". The " + s + " that remembers for you.",
+                "Never think about " + t + " again.",
+                cap(s) + " that actually works.",
+                P + " handles the " + t + ". You do not.",
+                "The " + s + " you will actually keep using." };
+        String[] subs = {
+                P + " watches the " + t + " so you can get on with your day. Set it up once, in under a minute.",
+                "A " + s + " with one job, done quietly in the background. No dashboards, no nagging, no setup wizard.",
+                "Everything you need for " + t + ", and nothing you don't. It works even when you forget it exists.",
+                "Built for the days you forget. " + P + " keeps an eye on " + t + " and only speaks up when it matters." };
         return new Copy(
                 pick(BADGES, idea),
-                Title.length() > 42 ? Title + "." : "Finally, " + stripped + ".",
-                "A delightfully simple way to " + stripped + ". No setup, no nonsense, working in seconds.",
+                pick(heads, idea + "h"),
+                pick(subs, idea + "sh"),
                 pick(CTAS, idea + "cta"),
                 List.of(
-                        new Feature("Effortless", "It just works. It handles the hard part so you don't have to."),
-                        new Feature("Yours in seconds", "Open it and you're already going. Zero learning curve."),
+                        new Feature("Effortless", P + " handles the " + t + " in the background. You get on with your day."),
+                        new Feature("Ready in seconds", "Open it and you are already going. No manual, no setup wizard."),
                         new Feature("Private by default", "Runs close to home. Your data stays where it belongs.")));
     }
 
     private String cannedSkeptic(String idea) {
-        String s = idea.strip().replaceAll("[.\\s]+$", "").replaceFirst("(?i)^an?\\s+", "");
+        String s = subject(idea);
         String[] notes = {
                 "Lovely idea. The hard part isn't building " + s + ", it's getting the first ten people to care.",
                 "Great, but who actually pays for " + s + "? Nail that before the logo.",

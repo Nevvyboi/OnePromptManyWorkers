@@ -304,11 +304,11 @@ async function build() {
     s.addText([{ text: "Five layers under every ", options: { color: INK } }, { text: "agent.", options: { color: INDIGO } }],
       { x: MX, y: 1.15, w: 11, h: 1, fontFace: DISP, bold: true, fontSize: 32 });
     const layers = [
-      ["FiServer", SKY, "runtime", "The model host.", "Ollama, running Qwen on your machine."],
-      ["FiShare2", VIOLET, "orchestration", "The loop and wiring.", "LangChain4j or Spring AI."],
-      ["FiTool", TEAL, "tools", "The hands.", "Java methods the model may call."],
-      ["FiDatabase", AMBER, "memory", "The notebook.", "What it carries between turns."],
-      ["FiBox", INDIGO, "structure", "Typed output.", "Answers as objects, not prose."],
+      ["FiServer", SKY, "runtime", "Ollama on localhost:11434.", "qwen2.5:3b on stage, 1.5b for background work."],
+      ["FiShare2", VIOLET, "orchestration", "LangChain4j 1.0 AiServices.", "Interfaces with annotations. No implementations."],
+      ["FiTool", TEAL, "tools", "Plain Java methods.", "Whatever you would let an intern call."],
+      ["FiDatabase", AMBER, "memory", "A queue and a result per idea.", "Nothing global. Each run is its own object."],
+      ["FiBox", INDIGO, "structure", "Java records: Copy, Palette, Tier.", "The model fills a type, it does not write prose."],
     ];
     for (let i = 0; i < layers.length; i++) {
       const y = 2.5 + i * 0.84;
@@ -673,6 +673,39 @@ async function build() {
       s.addText(items[i][3], { x: x + 0.4, y: y + 2.0, w: cw - 0.8, h: 1.0, fontFace: BODY, fontSize: 14, color: MUTED, lineSpacing: 20 });
     }
     s.addNotes("Reflect while the awe is warm. One sentence became a team that split the work and reported back. It self-assembled, it stayed home, it was a hundred lines. The scary part is not that it worked, it is how little it took.");
+  }
+
+  // =============================================== WHAT IT ACTUALLY TOOK
+  {
+    const s = slide();
+    eyebrow(s, "No hand waving", 0.62, TEAL);
+    s.addText([{ text: "The whole thing, ", options: { color: INK } }, { text: "measured.", options: { color: INDIGO } }],
+      { x: MX, y: 1.1, w: 11.4, h: 0.9, fontFace: DISP, bold: true, fontSize: 32 });
+    s.addText("Everything on this slide is counted from the repository you can clone tonight, not rounded up for a talk.",
+      { x: MX, y: 1.95, w: 8.6, h: 0.5, fontFace: BODY, fontSize: 15, color: MUTED });
+    const nums = [
+      ["1 212", "lines of Java", "across 8 files", INDIGO],
+      ["7", "agents", "one model, seven system prompts", VIOLET],
+      ["9", "HTTP endpoints", "submit, run, hide, queue, gallery, page…", SKY],
+      ["10", "event types", "streamed to the projector over SSE", TEAL],
+      ["8", "dependencies", "Spring Boot, LangChain4j, Ollama, ZXing", AMBER],
+      ["0", "cloud calls", "nothing left the laptop, all evening", ROSE],
+    ];
+    const cw = 3.72, ch = 1.62, gx = 0.28, gy = 0.26, x0 = MX, y0 = 2.7;
+    for (let i = 0; i < nums.length; i++) {
+      const col = i % 3, row = Math.floor(i / 3);
+      const x = x0 + col * (cw + gx), y = y0 + row * (ch + gy);
+      card(s, x, y, cw, ch);
+      s.addText(nums[i][0], { x: x + 0.35, y: y + 0.22, w: cw - 0.7, h: 0.62, fontFace: DISP, bold: true, fontSize: 30, color: nums[i][3] });
+      s.addText(nums[i][1], { x: x + 0.35, y: y + 0.82, w: cw - 0.7, h: 0.34, fontFace: DISP, bold: true, fontSize: 14, color: INK });
+      s.addText(nums[i][2], { x: x + 0.35, y: y + 1.14, w: cw - 0.7, h: 0.38, fontFace: BODY, fontSize: 11.5, color: MUTED, lineSpacing: 14 });
+    }
+    s.addText([
+      { text: "A landing page comes out at about ", options: { color: MUTED } },
+      { text: "12 KB", options: { color: INDIGO, bold: true } },
+      { text: ": one HTML file, styles inlined, no framework, no build step, opens on any phone in the room.", options: { color: MUTED } },
+    ], { x: MX, y: 6.5, w: W - 2 * MX, h: 0.6, align: "center", fontFace: BODY, fontSize: 15 });
+    s.addNotes("Use this to kill the 'yes but in the real world' objection before it is asked. Twelve hundred lines. Eight files. Seven agents that are one model with seven different system prompts. Nine endpoints. Eight dependencies. Zero cloud calls. You could read the whole thing on the train home, and the repo is in the QR at the end. Nothing here is a framework you have to buy into.");
   }
 
   // =============================================== THE HARNESS

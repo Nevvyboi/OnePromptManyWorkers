@@ -83,6 +83,31 @@ const ART_KINDS = ["blobs", "rings", "waves", "grid", "burst"];
 const words = idea => idea.trim().replace(/[.\s]+$/, "").replace(/^an?\s+/i, "");
 const Cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
+// The single most important helper here. An idea arrives as a whole sentence
+// ("a braai app that tells you when load-shedding starts so you know when...").
+// Splicing that into every slot produces garbage, so pull out the short noun
+// phrase at the front and write around that plus the product name instead.
+const STOP = new Set(["that","which","who","when","where","so","and","but","for","to","with",
+                      "if","because","while","after","before","from","by","of","in","on","at"]);
+function subject(idea) {
+  const w = words(idea).split(/\s+/);
+  const out = [];
+  for (const t of w) {
+    if (STOP.has(t.toLowerCase().replace(/[^a-z]/g, ""))) break;
+    out.push(t);
+    if (out.length >= 4) break;
+  }
+  return (out.length ? out.join(" ") : words(idea).split(/\s+/).slice(0, 3).join(" "))
+          .replace(/[^\w\s-]/g, "").trim();
+}
+// what the thing is about, in one or two words, for FAQ and feature lines
+function topic(idea) {
+  const s = subject(idea).split(/\s+/);
+  const junk = new Set(["app","tool","tracker","finder","scanner","map","planner","timer","thing","system","kit"]);
+  const core = s.filter(x => !junk.has(x.toLowerCase()));
+  return (core.length ? core : s).slice(0, 2).join(" ");
+}
+
 // --- Namer: invents a product name ---
 function makeName(idea) {
   const w = words(idea).split(/\s+/).filter(x => x.length > 3);
@@ -97,29 +122,36 @@ function makeName(idea) {
 
 // --- Copywriter ---
 function makeCopy(idea, productName) {
-  const s = words(idea), T = Cap(s);
+  const s = subject(idea), t = topic(idea), P = productName || Cap(s);
   return {
     badge: pick(["introducing", "new", "meet", "now live"], idea),
-    headline: pick([`${T}.`, `Finally, ${s}.`, `Meet ${s}.`, `${T}, done right.`], idea + "h"),
+    headline: pick([
+      `${Cap(s)}, finally done properly.`,
+      `${P}. The ${s} that remembers for you.`,
+      `Never think about ${t} again.`,
+      `${Cap(s)} that actually works.`,
+      `${P} handles the ${t}. You do not.`,
+      `The ${s} you will actually keep using.`,
+    ], idea + "h"),
     subhead: pick([
-      `A delightfully simple way to ${s}. No setup, no nonsense, working in seconds.`,
-      `Everything you need to ${s}, and nothing you don't. Ready in under a minute.`,
-      `We took ${s} and removed every annoying part. What's left is this.`,
-      `Built for the days you forget. ${Cap(s)}, handled quietly in the background.`,
+      `${P} watches the ${t} so you can get on with your day. Set it up once, in under a minute.`,
+      `A ${s} with one job, done quietly in the background. No dashboards, no nagging, no setup wizard.`,
+      `Everything you need for ${t}, and nothing you don't. It works even when you forget it exists.`,
+      `Built for the days you forget. ${P} keeps an eye on ${t} and only speaks up when it matters.`,
     ], idea + "sh"),
     cta: pick(["Get early access", "Start free", "Join the waitlist", "Try it now"], idea + "c"),
     features: pick([
-      [ { title: "Effortless", body: `It handles the hard part of ${s} so you never think about it.` },
+      [ { title: "Effortless", body: `${P} handles the ${t} in the background. You get on with your day.` },
         { title: "Ready in seconds", body: "Open it and you are already going. No manual, no setup wizard." },
         { title: "Private by default", body: "Runs close to home. Your data stays where it belongs." } ],
-      [ { title: "Always watching", body: `It keeps an eye on ${s} even when you have forgotten all about it.` },
+      [ { title: "Always watching", body: `It keeps an eye on ${t} even when you have forgotten it exists.` },
         { title: "One tap", body: "The whole thing is a single screen. That is the entire product." },
         { title: "Works offline", body: "No signal, no problem. It catches up when you are back." } ],
-      [ { title: "Quietly clever", body: `It learns your habits around ${s} and stops asking questions.` },
+      [ { title: "Quietly clever", body: `It learns your habits around ${t} and stops asking the obvious questions.` },
         { title: "Share it", body: "Bring in the family, the team, the whole street. Everyone stays in sync." },
         { title: "Free to start", body: "Use it properly before you decide whether it is worth anything." } ],
       [ { title: "No nagging", body: "It tells you once, at the right moment, and then leaves you alone." },
-        { title: "Honest numbers", body: `See exactly what ${s} is costing you, in plain language.` },
+        { title: "Honest numbers", body: `See exactly what ${t} is costing you, in plain language.` },
         { title: "Yours to keep", body: "Export everything, any time. No hostage taking." } ],
     ], idea + "f"),
   };
@@ -148,7 +180,7 @@ function makeReview(idea) {
 
 // --- Pricer: three tiers, so the page has something to sell ---
 function makePricing(idea, productName) {
-  const s = words(idea), P = productName || "it";
+  const s = topic(idea), P = productName || "it";
   const cheap = pick(["Free", "R0", "Free forever"], idea + "p0");
   const mid = pick(["R49", "R79", "R99", "R120"], idea + "p1");
   const top = pick(["R199", "R249", "R299", "R350"], idea + "p2");
@@ -163,9 +195,9 @@ function makePricing(idea, productName) {
 }
 
 function makeFaq(idea) {
-  const s = words(idea);
+  const s = topic(idea);
   return [
-    { q: `Does it actually work for ${s.split(" ").slice(0,3).join(" ")}?`,
+    { q: `Does it really work for ${s}?`,
       a: "Yes, and it keeps working when you forget about it, which is the entire point." },
     { q: "Where does my data go?",
       a: "Nowhere. It stays on your device. There is no cloud account and nothing to leak." },
@@ -176,7 +208,7 @@ function makeFaq(idea) {
 
 // --- Skeptic ---
 const skepticNote = idea => {
-  const s = words(idea);
+  const s = subject(idea);
   return pick([
     `Lovely idea. The hard part isn't building ${s}, it's getting the first ten people to care.`,
     `Great, but who actually pays for ${s}? Nail that before the logo.`,
@@ -187,14 +219,13 @@ const skepticNote = idea => {
 
 // --- Copywriter's rewrite after the skeptic ---
 function reviseHeadline(idea, productName) {
-  const s = words(idea);
-  const first = s.split(/\s+/)[0] || "it";
-  const P = productName || Cap(first);
+  const s = subject(idea), t = topic(idea), first = t.split(/\s+/)[0] || "it";
+  const P = productName || Cap(s);
   return pick([
     `${Cap(s)}. Zero effort, zero guilt.`,
-    `${P} remembers, so you don't have to.`,
+    `${P} remembers the ${t}, so you don't have to.`,
     `${Cap(s)}, minus the guesswork.`,
-    `The lazy way to ${s}. On purpose.`,
+    `The lazy way to handle ${t}. On purpose.`,
     `Set it once. ${P} takes it from there.`,
     `${P}. Because you will forget again.`,
     `Stop thinking about ${first}. ${P} has it.`,

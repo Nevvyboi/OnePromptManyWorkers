@@ -123,8 +123,9 @@ before the day, follow [REHEARSAL.md](REHEARSAL.md).
 
 ## The deck
 
-Thirty slides that climb from a single prompt to a live swarm, and end on the
-point that matters: **the model was the easy part, the harness is the work**. Open
+Thirty-one slides that climb from a single prompt to a live swarm, and end on
+the point that matters: **the model was the easy part, the harness is the
+work**. Every figure quoted on stage is counted from this repository. Open
 [`deck/index.html`](deck/index.html) in any browser and press **F** for fullscreen,
 **N** for presenter notes. The same talk is in [`slides/`](slides/) as PowerPoint.
 
@@ -136,6 +137,10 @@ point that matters: **the model was the easy part, the harness is the work**. Op
   <tr>
     <td><img src="assets/deck-levers.png" alt="Six levers slide"></td>
     <td><img src="assets/deck-harness.png" alt="The harness slide"></td>
+  </tr>
+  <tr>
+    <td><img src="assets/deck-numbers.png" alt="The measured slide"></td>
+    <td><img src="assets/deck-live-build.png" alt="Live build slide"></td>
   </tr>
 </table>
 
