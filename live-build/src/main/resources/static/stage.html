@@ -17,44 +17,60 @@
   html,body{height:100%;overflow:hidden}
   body{background:radial-gradient(120% 90% at 20% -10%,#12151E 0%,var(--ink) 55%);color:var(--paper);font-family:var(--sans);display:flex;flex-direction:column;height:100vh}
 
-  header{display:flex;align-items:center;gap:1.2rem;padding:1.5vh 2.4vw;border-bottom:1px solid var(--line);flex:none}
-  .live{display:inline-flex;align-items:center;gap:.6rem;font-family:var(--mono);font-size:.78rem;letter-spacing:.28em;text-transform:uppercase;color:var(--amber)}
+  header{display:flex;align-items:center;gap:1.2rem;padding:1.3vh 2.2vw;border-bottom:1px solid var(--line);flex:none}
+  .live{display:inline-flex;align-items:center;gap:.6rem;font-family:var(--mono);font-size:.76rem;letter-spacing:.28em;text-transform:uppercase;color:var(--amber)}
   .live .blip{width:11px;height:11px;border-radius:50%;background:var(--amber);animation:blip 1.5s infinite}
   @keyframes blip{0%{box-shadow:0 0 0 0 rgba(245,165,36,.55)}70%{box-shadow:0 0 0 13px rgba(245,165,36,0)}100%{box-shadow:0 0 0 0 rgba(245,165,36,0)}}
-  header .idea{flex:1;font-family:var(--serif);font-size:clamp(1.1rem,2.2vw,2rem);color:var(--paper);line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  header .idea .lbl{font-family:var(--mono);font-size:.66rem;letter-spacing:.2em;color:var(--faint);text-transform:uppercase;display:block;margin-bottom:.15rem}
-  header .by{font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+  header .ttl{flex:1;font-family:var(--mono);font-size:.68rem;letter-spacing:.2em;color:var(--faint);text-transform:uppercase}
 
-  main{flex:1;display:grid;grid-template-columns:30% 1fr;gap:2vw;padding:2vh 2.4vw;min-height:0}
+  main{flex:1;display:grid;grid-template-columns:34% 1fr;gap:1.8vw;padding:1.8vh 2.2vw;min-height:0}
+  .left{display:flex;flex-direction:column;gap:1.1vh;min-height:0}
+  .h{font-family:var(--mono);font-size:.66rem;letter-spacing:.24em;text-transform:uppercase;color:var(--faint);flex:none}
 
-  /* ---- the web ---- */
-  .net{display:flex;flex-direction:column;min-height:0;gap:.6rem}
-  .net .h{font-family:var(--mono);font-size:.7rem;letter-spacing:.24em;text-transform:uppercase;color:var(--faint)}
-  #web{width:100%;flex:1;min-height:0}
+  /* ---------- who sent it ---------- */
+  .who{flex:none;display:flex;gap:.9rem;align-items:flex-start;border:1px solid var(--line);border-radius:14px;padding:.9rem 1rem;background:linear-gradient(180deg,var(--panel),transparent 160%)}
+  .who .av{width:44px;height:44px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
+    font-family:var(--sans);font-weight:800;font-size:1.2rem;color:#0B0D12;background:var(--amber);
+    box-shadow:0 0 0 3px rgba(245,165,36,.18)}
+  .who .nm{font-weight:700;font-size:1.02rem;line-height:1.2}
+  .who .nm span{font-family:var(--mono);font-size:.64rem;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:.18rem;font-weight:400}
+  .who .idea{font-family:var(--serif);font-size:1.06rem;line-height:1.32;color:var(--paper);margin-top:.35rem}
+  .who.empty .av{background:var(--line);color:var(--faint)}
+
+  /* ---------- the web ---------- */
+  #web{width:100%;flex:1 1 auto;min-height:0}
   .edge{fill:none;stroke:var(--line);stroke-width:1.6;transition:stroke .3s}
   .edge.feedback{stroke-dasharray:5 6}
   .edge.hot{stroke:var(--ec,var(--amber));filter:drop-shadow(0 0 6px var(--ec,var(--amber)))}
-  .node circle.body{fill:var(--panel);stroke:var(--nc);stroke-width:1.6;transition:fill .3s}
-  .node.done circle.body{fill:var(--nc)}
-  .node .ring{fill:none;stroke:var(--nc);stroke-width:2;stroke-dasharray:40 90;opacity:0;transform-box:fill-box;transform-origin:center}
+  .node circle.body{fill:var(--panel);stroke:var(--nc);stroke-width:1.7;transition:fill .35s}
+  .node.done circle.body,.node.assisting circle.body{fill:var(--nc)}
+  .node .ring{fill:none;stroke:var(--nc);stroke-width:2.2;stroke-dasharray:38 90;opacity:0;transform-box:fill-box;transform-origin:center}
   .node.working .ring,.node.assisting .ring{opacity:1;animation:spin 1s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
   .node text{font-family:var(--mono);text-anchor:middle}
-  .node .lab{fill:var(--paper);font-size:12.5px;letter-spacing:.06em}
-  .node .st{fill:var(--faint);font-size:9px;letter-spacing:.14em;text-transform:uppercase}
-  .node.working .st,.node.assisting .st{fill:var(--nc)}
-  .node.done .st{fill:var(--nc)}
-  .node.idle{opacity:.55}
+  .node .lab{fill:var(--paper);font-size:12px;letter-spacing:.05em}
+  .node.done .lab,.node.assisting .lab{fill:#0B0D12;font-weight:700}
+  .node.idle{opacity:.5}
+  .tok text{font-family:var(--mono)}
 
-  .feed{flex:none;max-height:26vh;overflow:hidden;display:flex;flex-direction:column;gap:.45rem}
-  .feed .row{font-family:var(--mono);font-size:.76rem;color:var(--muted);line-height:1.35;border-left:2px solid var(--fc,var(--line));padding-left:.7rem;animation:fin .3s ease}
-  .feed .row b{color:var(--paper);font-weight:600}
-  @keyframes fin{from{opacity:0;transform:translateY(-4px)}to{opacity:1}}
+  /* ---------- the crew roster ---------- */
+  .crew{flex:none;display:flex;flex-direction:column;gap:.42rem}
+  .ag{display:grid;grid-template-columns:auto 1fr auto;gap:.7rem;align-items:center;
+      border:1px solid var(--line);border-left:3px solid var(--ac);border-radius:10px;
+      padding:.5rem .75rem;background:var(--panel2);opacity:.55;transition:opacity .3s,background .3s}
+  .ag.on{opacity:1;background:var(--panel)}
+  .ag .dot{width:10px;height:10px;border-radius:50%;background:var(--ac)}
+  .ag .nm{display:block;font-family:var(--mono);font-size:.86rem;color:var(--paper);line-height:1.35}
+  .ag .job{display:block;font-size:.76rem;color:var(--muted);line-height:1.25}
+  .ag .st{font-family:var(--mono);font-size:.62rem;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);white-space:nowrap;text-align:right}
+  .ag.working .st,.ag.assisting .st{color:var(--ac)}
+  .ag.done .st{color:var(--ac)}
+  .ag .help{display:block;font-family:var(--mono);font-size:.63rem;color:var(--ac);margin-top:.15rem}
 
-  /* ---- the build frame ---- */
+  /* ---------- the build frame ---------- */
   .build{min-height:0;display:flex;flex-direction:column}
   .frame{flex:1;border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;background:#fff;box-shadow:0 40px 90px -50px #000;min-height:0}
-  .chrome{flex:none;display:flex;align-items:center;gap:.5rem;padding:.6rem .9rem;background:#0d1017;border-bottom:1px solid var(--line)}
+  .chrome{flex:none;display:flex;align-items:center;gap:.5rem;padding:.55rem .9rem;background:#0d1017;border-bottom:1px solid var(--line)}
   .chrome .dot{width:11px;height:11px;border-radius:50%}
   .chrome .url{margin-left:.6rem;font-family:var(--mono);font-size:.72rem;color:var(--faint);background:#161a24;padding:.3rem .8rem;border-radius:7px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .viewport{flex:1;overflow:auto;position:relative}
@@ -70,24 +86,24 @@
 
   .sec{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
   .sec.in{opacity:1;transform:none}
-  .hero h1{font-weight:800;font-size:clamp(2rem,4.6vw,3.6rem);line-height:1.05;letter-spacing:-.02em;max-width:20ch;transition:opacity .25s;border-radius:8px}
+  .hero h1{font-weight:800;font-size:clamp(2rem,4.4vw,3.4rem);line-height:1.05;letter-spacing:-.02em;max-width:20ch;border-radius:8px}
   .hero h1.flash{animation:flash 1.6s ease}
   @keyframes flash{0%{background:rgba(245,165,36,0)}18%{background:rgba(245,165,36,.45)}100%{background:transparent}}
   .rev-tag{display:inline-block;font-family:var(--mono);font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:var(--pg-primary);border:1px dashed var(--pg-primary);border-radius:16px;padding:.22rem .7rem;margin-top:.7rem;opacity:0;transition:opacity .5s}
   .rev-tag.show{opacity:1}
-  .hero .subh{font-size:clamp(1rem,1.7vw,1.4rem);color:var(--pg-muted);margin-top:1rem;max-width:44ch;line-height:1.5}
-  .hero .cta{display:inline-block;margin-top:1.6rem;background:var(--pg-primary);color:#12100a;font-weight:700;padding:.85rem 1.6rem;border-radius:11px;font-size:1.05rem}
-  .badge{display:inline-block;font-family:var(--mono);font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--pg-primary);border:1px solid var(--pg-primary);border-radius:20px;padding:.3rem .8rem;margin-bottom:1.2rem}
-  .feats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:2.4rem}
+  .hero .subh{font-size:clamp(1rem,1.6vw,1.35rem);color:var(--pg-muted);margin-top:1rem;max-width:44ch;line-height:1.5}
+  .hero .cta{display:inline-block;margin-top:1.5rem;background:var(--pg-primary);color:#12100a;font-weight:700;padding:.8rem 1.5rem;border-radius:11px;font-size:1.02rem}
+  .badge{display:inline-block;font-family:var(--mono);font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--pg-primary);border:1px solid var(--pg-primary);border-radius:20px;padding:.3rem .8rem;margin-bottom:1.1rem}
+  .feats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:2.2rem}
   @media(max-width:1100px){.feats{grid-template-columns:1fr}}
-  .feat{background:var(--pg-surface);border-radius:13px;padding:1.3rem 1.2rem}
-  .feat .fi{width:34px;height:34px;border-radius:9px;background:var(--pg-accent);opacity:.9;margin-bottom:.8rem}
-  .feat h4{font-size:1.15rem;font-weight:700;margin-bottom:.4rem}
-  .feat p{font-size:.92rem;color:var(--pg-muted);line-height:1.5}
-  .skeptic{margin-top:2rem;border-left:3px solid var(--rose);background:rgba(251,113,133,.08);padding:.9rem 1.2rem;border-radius:0 10px 10px 0;font-size:.95rem;color:var(--pg-muted)}
+  .feat{background:var(--pg-surface);border-radius:13px;padding:1.2rem 1.1rem}
+  .feat .fi{width:32px;height:32px;border-radius:9px;background:var(--pg-accent);opacity:.9;margin-bottom:.7rem}
+  .feat h4{font-size:1.1rem;font-weight:700;margin-bottom:.35rem}
+  .feat p{font-size:.9rem;color:var(--pg-muted);line-height:1.5}
+  .skeptic{margin-top:1.8rem;border-left:3px solid var(--rose);background:rgba(251,113,133,.08);padding:.85rem 1.15rem;border-radius:0 10px 10px 0;font-size:.94rem;color:var(--pg-muted)}
   .skeptic b{color:var(--rose);font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;display:block;margin-bottom:.3rem}
 
-  footer{flex:none;display:flex;align-items:center;justify-content:space-between;padding:1.2vh 2.4vw;border-top:1px solid var(--line);font-family:var(--mono);font-size:.74rem;color:var(--faint);letter-spacing:.1em}
+  footer{flex:none;display:flex;align-items:center;justify-content:space-between;padding:1vh 2.2vw;border-top:1px solid var(--line);font-family:var(--mono);font-size:.72rem;color:var(--faint);letter-spacing:.1em}
   footer .join{color:var(--muted)} footer .join b{color:var(--amber)}
   .tally b{color:var(--paper)}
 </style>
@@ -95,15 +111,25 @@
 <body>
   <header>
     <span class="live"><span class="blip"></span> Live Build</span>
-    <div class="idea"><span class="lbl">one prompt</span><span id="ideaText">waiting for an idea…</span></div>
-    <span class="by" id="byText"></span>
+    <span class="ttl">one prompt · many workers · every token on this laptop</span>
+    <span class="live" id="modeTop" style="color:var(--muted)"></span>
   </header>
 
   <main>
-    <section class="net">
+    <section class="left">
+      <div class="h">whose idea this is</div>
+      <div class="who empty" id="who">
+        <div class="av" id="avatar">?</div>
+        <div>
+          <div class="nm"><span>waiting</span>nobody yet</div>
+          <div class="idea" id="whoIdea">scan the code and send the crew an idea</div>
+        </div>
+      </div>
+
       <div class="h">the web · agents helping agents</div>
-      <svg id="web" viewBox="0 0 400 400" aria-hidden="true"></svg>
-      <div class="feed" id="feed"></div>
+      <svg id="web" viewBox="0 0 400 300" aria-hidden="true"></svg>
+
+      <div class="crew" id="crew"></div>
     </section>
 
     <section class="build">
@@ -126,35 +152,50 @@
   </main>
 
   <footer>
-    <span class="tally"><b id="tally">0</b> ideas submitted</span>
+    <span class="tally"><b id="tally">0</b> ideas sent by the room</span>
     <span class="join">scan the QR to join · everything runs <b>on this laptop</b></span>
     <span id="mode"></span>
   </footer>
 
 <script>
   const NS = "http://www.w3.org/2000/svg";
-  const COLORS = { copywriter:"#2DD4BF", designer:"#8B5CF6", builder:"#38BDF8", skeptic:"#FB7185", planner:"#F5A524" };
-  const web = document.getElementById("web");
-  const feedEl = document.getElementById("feed");
-  const pg = document.getElementById("pg");
+  const COLORS = { copywriter:"#2DD4BF", designer:"#8B5CF6", builder:"#38BDF8", skeptic:"#FB7185" };
+  // what each agent is for, in plain words, so the room understands the crew
+  const JOBS = {
+    copywriter: { label: "copy",    name: "Copywriter", job: "writes the words" },
+    designer:   { label: "design",  name: "Designer",   job: "picks the colours and type" },
+    builder:    { label: "build",   name: "Builder",    job: "assembles the page" },
+    skeptic:    { label: "skeptic", name: "Skeptic",    job: "finds the flaw" },
+  };
+  const web = document.getElementById("web"), crewEl = document.getElementById("crew"), pg = document.getElementById("pg");
   let pageState = null, nodePos = {}, edgeIds = {};
 
-  // ---- the web graph ----
-  const FIXED = { copywriter:[200,62], designer:[62,200], builder:[338,200], skeptic:[200,338] };
-  const R = 27, C = [200,200];
+  const esc = s => (s||"").replace(/[&<>]/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[m]));
+  const slug = s => (s||"idea").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,26);
+
+  // ---------- who sent it ----------
+  function setWho(name, idea){
+    const who = document.getElementById("who");
+    const clean = (name||"").trim();
+    who.classList.toggle("empty", !idea);
+    document.getElementById("avatar").textContent = clean ? clean[0].toUpperCase() : "?";
+    who.querySelector(".nm").innerHTML = `<span>sent by</span>${esc(clean || "anonymous")}`;
+    document.getElementById("whoIdea").textContent = idea || "";
+  }
+
+  // ---------- the web graph ----------
+  const FIXED = { copywriter:[200,52], designer:[58,150], builder:[342,150], skeptic:[200,248] };
+  const R = 26, C = [200,150];
 
   function drawGraph(nodes, edges){
     web.innerHTML = ""; nodePos = {}; edgeIds = {};
-    nodes.forEach((n,i)=>{
-      nodePos[n.key] = FIXED[n.key] || [ C[0]+150*Math.cos(2*Math.PI*i/nodes.length-Math.PI/2), C[1]+150*Math.sin(2*Math.PI*i/nodes.length-Math.PI/2) ];
-    });
+    nodes.forEach((n,i)=>{ nodePos[n.key] = FIXED[n.key] || [C[0]+140*Math.cos(2*Math.PI*i/nodes.length-Math.PI/2), C[1]+110*Math.sin(2*Math.PI*i/nodes.length-Math.PI/2)]; });
     edges.forEach(e=>{
       const a = nodePos[e.from], b = nodePos[e.to]; if(!a||!b) return;
       const mid = [(a[0]+b[0])/2,(a[1]+b[1])/2];
-      let dx = mid[0]-C[0], dy = mid[1]-C[1], len = Math.hypot(dx,dy);
-      let ctrl;
-      if (len < 12){ const nx=-(b[1]-a[1]), ny=b[0]-a[0], nl=Math.hypot(nx,ny); ctrl=[mid[0]+72*nx/nl, mid[1]+72*ny/nl]; }
-      else ctrl = [mid[0]+46*dx/len, mid[1]+46*dy/len];
+      let dx = mid[0]-C[0], dy = mid[1]-C[1], len = Math.hypot(dx,dy), ctrl;
+      if (len < 12){ const nx=-(b[1]-a[1]), ny=b[0]-a[0], nl=Math.hypot(nx,ny); ctrl=[mid[0]+70*nx/nl, mid[1]+70*ny/nl]; }
+      else ctrl = [mid[0]+42*dx/len, mid[1]+42*dy/len];
       const trim=(p,q)=>{ const vx=q[0]-p[0], vy=q[1]-p[1], vl=Math.hypot(vx,vy); return [p[0]+R*vx/vl, p[1]+R*vy/vl]; };
       const s = trim(a,ctrl), t = trim(b,ctrl);
       const path = document.createElementNS(NS,"path");
@@ -164,45 +205,71 @@
       web.appendChild(path);
     });
     nodes.forEach(n=>{
-      const [x,y] = nodePos[n.key];
+      const [x,y] = nodePos[n.key], meta = JOBS[n.key] || { label:n.key };
       const g = document.createElementNS(NS,"g");
       g.setAttribute("class","node idle"); g.id = "n-"+n.key;
       g.style.setProperty("--nc", COLORS[n.key]||"#8A8FA0");
       g.innerHTML = `<circle class="ring" cx="${x}" cy="${y}" r="${R+7}"></circle>
         <circle class="body" cx="${x}" cy="${y}" r="${R}"></circle>
-        <text class="lab" x="${x}" y="${y+4}">${n.label}</text>
-        <text class="st" x="${x}" y="${y+R+16}">queued</text>`;
+        <text class="lab" x="${x}" y="${y+4}">${meta.label}</text>`;
       web.appendChild(g);
     });
-  }
-  function setNode(key, state, stText){
-    const g = document.getElementById("n-"+key); if(!g) return;
-    g.setAttribute("class","node "+state);
-    g.querySelector(".st").textContent = stText || state;
-    if (state==="done") g.querySelector(".lab").setAttribute("fill","#0B0D12");
-  }
-  function pulse(from, to, color){
-    const id = edgeIds[from+">"+to]; const path = id && document.getElementById(id); if(!path) return;
-    path.style.setProperty("--ec", color || COLORS[from] || "#F5A524");
-    path.classList.add("hot"); setTimeout(()=>path.classList.remove("hot"), 1300);
-    const dot = document.createElementNS(NS,"circle");
-    dot.setAttribute("r","5"); dot.setAttribute("fill", color || COLORS[from] || "#F5A524");
-    const am = document.createElementNS(NS,"animateMotion");
-    am.setAttribute("dur","0.9s"); am.setAttribute("fill","freeze");
-    const mp = document.createElementNS(NS,"mpath");
-    mp.setAttributeNS("http://www.w3.org/1999/xlink","href","#"+id);
-    am.appendChild(mp); dot.appendChild(am); web.appendChild(dot);
-    setTimeout(()=>dot.remove(), 1000);
-  }
-  function feed(html, color){
-    const row = document.createElement("div");
-    row.className = "row"; row.style.setProperty("--fc", color || "var(--line)");
-    row.innerHTML = html;
-    feedEl.prepend(row);
-    while (feedEl.children.length > 6) feedEl.lastChild.remove();
+    drawCrew(nodes);
   }
 
-  // ---- the page being built ----
+  // ---------- the crew roster: name, job, live status ----------
+  function drawCrew(nodes){
+    crewEl.innerHTML = "";
+    nodes.forEach(n=>{
+      const meta = JOBS[n.key] || { name:n.key, job:"" };
+      const row = document.createElement("div");
+      row.className = "ag"; row.id = "ag-"+n.key;
+      row.style.setProperty("--ac", COLORS[n.key]||"#8A8FA0");
+      row.innerHTML = `<span class="dot"></span>
+        <span><span class="nm">${meta.name}</span><span class="job">${meta.job}</span><span class="help" id="help-${n.key}"></span></span>
+        <span class="st">waiting</span>`;
+      crewEl.appendChild(row);
+    });
+  }
+
+  const STATUS = { working:"working", assisting:"helping", done:"done", idle:"waiting" };
+  function setAgent(key, state, note){
+    const g = document.getElementById("n-"+key);
+    if (g) g.setAttribute("class","node "+state);
+    const row = document.getElementById("ag-"+key);
+    if (row){
+      row.className = "ag on " + state;
+      row.querySelector(".st").textContent = STATUS[state] || state;
+    }
+  }
+  function setHelp(key, text){
+    const el = document.getElementById("help-"+key);
+    if (el) el.textContent = text || "";
+  }
+
+  // ---------- the visible handoff ----------
+  function pulse(from, to, label){
+    const id = edgeIds[from+">"+to], path = id && document.getElementById(id);
+    const color = COLORS[from] || "#F5A524";
+    if(!path) return;
+    path.style.setProperty("--ec", color);
+    path.classList.add("hot"); setTimeout(()=>path.classList.remove("hot"), 1500);
+    // a labelled token that physically travels the edge, so the room sees the handoff
+    const txt = (label||"").slice(0,18);
+    const w = Math.max(40, txt.length * 5.6 + 16);
+    const g = document.createElementNS(NS,"g");
+    g.setAttribute("class","tok");
+    g.innerHTML = `<rect x="${-w/2}" y="-9" width="${w}" height="18" rx="9" fill="${color}"></rect>
+      <text x="0" y="4" text-anchor="middle" font-size="9.5" fill="#0B0D12" font-weight="700">${esc(txt)}</text>`;
+    const am = document.createElementNS(NS,"animateMotion");
+    am.setAttribute("dur","1.15s"); am.setAttribute("fill","freeze"); am.setAttribute("rotate","0");
+    const mp = document.createElementNS(NS,"mpath");
+    mp.setAttributeNS("http://www.w3.org/1999/xlink","href","#"+id);
+    am.appendChild(mp); g.appendChild(am); web.appendChild(g);
+    setTimeout(()=>g.remove(), 1250);
+  }
+
+  // ---------- the page being built ----------
   function ensurePage(){
     if (pageState) return;
     document.getElementById("waiting")?.remove();
@@ -214,8 +281,6 @@
     pg.appendChild(pageState);
   }
   const show = id => { const e=document.getElementById(id); if(e){ e.style.display=""; requestAnimationFrame(()=>e.classList.add("in")); } };
-  const esc = s => (s||"").replace(/[&<>]/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[m]));
-  const slug = s => (s||"idea").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,26);
 
   function applyCopy(c){
     ensurePage();
@@ -246,28 +311,29 @@
   }
 
   function resetStage(idea, name){
-    web.innerHTML=""; feedEl.innerHTML=""; pageState=null;
+    web.innerHTML=""; crewEl.innerHTML=""; pageState=null;
     pg.removeAttribute("style");
     pg.innerHTML = `<div class="waiting" id="waiting"><div class="pulse"></div><h3>Assembling the web…</h3><p>${esc(idea||"")}</p></div>`;
-    document.getElementById("ideaText").textContent = idea || "…";
-    document.getElementById("byText").textContent = name ? "by "+name : "";
+    setWho(name, idea);
     document.getElementById("url").textContent = "https://"+slug(idea)+".local";
   }
 
-  // ---- SSE ----
+  // ---------- SSE ----------
   const es = new EventSource("/api/events");
   const J = e => JSON.parse(e.data);
-  es.addEventListener("info", e => { const d=J(e); document.getElementById("mode").textContent = d.mock ? "mock mode" : "qwen · local"; if(d.tally!=null) document.getElementById("tally").textContent=d.tally; });
+  es.addEventListener("info", e => { const d=J(e); const m = d.mock ? "mock mode" : "qwen · local";
+    document.getElementById("mode").textContent = m; document.getElementById("modeTop").textContent = m;
+    if(d.tally!=null) document.getElementById("tally").textContent=d.tally; });
   es.addEventListener("tally", e => { document.getElementById("tally").textContent = J(e).total; });
   es.addEventListener("run-start", e => { const d=J(e); resetStage(d.idea, d.name); });
   es.addEventListener("graph", e => { const d=J(e); drawGraph(d.nodes||[], d.edges||[]); });
-  es.addEventListener("agent-state", e => {
-    const d=J(e); setNode(d.key, d.state);
-    if (d.note) feed(`<b>${d.key}</b> · ${esc(d.note)}`, COLORS[d.key]);
-  });
+  es.addEventListener("agent-state", e => { const d=J(e); setAgent(d.key, d.state, d.note); });
   es.addEventListener("flow", e => {
-    const d=J(e); pulse(d.from, d.to, COLORS[d.from]);
-    feed(`<b>${d.from}</b> -> <b>${d.to}</b> · ${esc(d.what||"")}`, COLORS[d.from]);
+    const d=J(e);
+    pulse(d.from, d.to, d.what);
+    // show on the receiving agent that it just got help, and from whom
+    const giver = (JOBS[d.from]||{}).name || d.from;
+    setHelp(d.to, "got " + (d.what||"work") + " from " + giver);
   });
   es.addEventListener("worker-done", e => {
     const d=J(e);
@@ -275,8 +341,7 @@
     if(d.key==="designer" && d.payload) applyDesign(d.payload);
     if(d.key==="skeptic" && d.payload) applySkeptic(d.payload.note || d.payload);
   });
-  es.addEventListener("revise", e => { const d=J(e); applyRevise(d); });
-  es.addEventListener("run-done", () => {});
+  es.addEventListener("revise", e => applyRevise(J(e)));
   es.onerror = () => {/* auto-reconnects */};
 </script>
 </body>

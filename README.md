@@ -38,11 +38,20 @@ projector. Every token runs on a laptop through Ollama. Nothing leaves the room.
 ## The Live Build
 
 The star of the talk. It performs the title live: one prompt (an audience member's
-idea) becomes many workers (Copywriter, Designer, Builder, Skeptic) that build a
-real landing page on stage. And the crew is a **spider net**, not a pipeline:
-agents run in parallel, the one that finishes first assists another, and the
-Skeptic's critique loops back so the Copywriter revises the headline live on the
-projector.
+idea) becomes many workers that build a real landing page on stage.
+
+The projector shows the whole story at once, so nobody has to take your word for it:
+
+- **whose idea it is** — the sender's name and their exact words, up top
+- **what each agent is for** — Copywriter *writes the words*, Designer *picks the
+  colours and type*, Builder *assembles the page*, Skeptic *finds the flaw*
+- **how they help each other** — when an agent finishes it does not idle, it hands
+  its work to another, and you watch that handoff travel the wire as a labelled
+  chip: `tone hint`, `palette`, `the page`, `critique`, `revised hero`
+
+Because the crew is a **spider net**, not a pipeline: agents run in parallel, the
+one that finishes first assists another, and the Skeptic's critique loops back so
+the Copywriter rewrites the headline live on the projector.
 
 <table>
   <tr>
@@ -51,7 +60,7 @@ projector.
   </tr>
   <tr>
     <td><img src="assets/live-join.png" alt="Full-screen join QR"><br><sub><b>Join</b> a full-screen QR for the projector.</sub></td>
-    <td><img src="assets/live-stage-web.png" alt="The web mid-run, agents assisting each other"><br><sub><b>Stage</b> the web mid-run: edges pulse as agents help each other.</sub></td>
+    <td><img src="assets/live-stage-web.png" alt="The web mid-run, a tone hint travelling from Designer to Copywriter"><br><sub><b>Stage</b> caught mid-handoff: the Designer finished first, so a "tone hint" is travelling to the Copywriter.</sub></td>
   </tr>
 </table>
 
