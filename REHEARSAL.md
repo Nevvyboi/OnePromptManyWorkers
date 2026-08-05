@@ -32,7 +32,7 @@ cd live-build
 mvn spring-boot:run -Dspring-boot.run.arguments=--live.mock=true
 ```
 
-- [ ] Open `http://localhost:8080/control`. The QR and a URL show. Footer says **mock mode**.
+- [ ] The terminal prints three URLs. Open the **`/control?key=…`** one. The QR and a URL show. Footer says **mock mode**.
 - [ ] Open `http://localhost:8080/stage` in a second window. It says "Ready for your idea".
 - [ ] Open `http://localhost:8080/` (audience). Type an idea, Send. You see "You're in."
 - [ ] The idea appears in `/control`.
@@ -90,6 +90,7 @@ Run these so the real thing holds no surprises.
 - [ ] **Spam.** Submit twice fast from one phone. The second is rejected with "One at a time." Submit 9 times total. After 8 it says "That's plenty from you."
 - [ ] **Duplicate.** Two people send the same idea. The second gets "Someone already sent that one."
 - [ ] **No submissions yet.** Before anyone submits, click **Run a built-in demo idea**. The show still works.
+- [ ] **Someone finds the control panel.** On a second device, open `/control` with no key. You should get a "presenter only" page, and `POST /api/run/1` should be refused. Nobody but you can drive the projector.
 - [ ] **Total meltdown.** Play your recorded backup video and keep talking. Practice the sentence: "Here's one I ran earlier, same code, same laptop."
 
 Pass when: none of these stop the talk.
@@ -110,7 +111,7 @@ Present the whole thing to an empty room or one friend, with the stopwatch.
 
 - [ ] Phone hotspot on. Laptop joined. Server running in live mode.
 - [ ] Warm Qwen once: `ollama run qwen2.5:3b "hi"`.
-- [ ] `/stage` on the projector, `/control` on your laptop, `/join` ready to show.
+- [ ] `/stage` on the projector, `/control?key=…` on your laptop (never on the projector), `/join` ready to show.
 - [ ] Terminal font large, notifications off, Do Not Disturb on.
 - [ ] Backup video open in a tab.
 

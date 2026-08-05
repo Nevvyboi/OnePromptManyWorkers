@@ -18,6 +18,11 @@ function lanIp() {
 }
 const AUDIENCE_URL = `http://${lanIp()}:${PORT}/`;
 
+// Presenter key. The room is on your hotspot, and a dev WILL find /control.
+// Without this, anyone can trigger a build on the projector.
+const KEY = process.env.KEY || Math.random().toString(36).slice(2, 8);
+const keyOk = url => url.searchParams.get("key") === KEY;
+
 // ---------- state ----------
 let ideas = [];       // {id, text, name, status}
 let nextId = 1;
@@ -174,7 +179,11 @@ const server = http.createServer(async (req, res) => {
 
   if (p === "/") return serveStatic(res, "index.html");
   if (p === "/stage") return serveStatic(res, "stage.html");
-  if (p === "/control") return serveStatic(res, "control.html");
+  if (p === "/control") {
+    if (!keyOk(url)) { res.writeHead(403, { "Content-Type":"text/html" });
+      return res.end("<body style='background:#0B0D12;color:#8A8FA0;font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;text-align:center'><div><h2 style='color:#ECE7DE'>Presenter only</h2><p>Open the control URL printed in your terminal.</p></div></body>"); }
+    return serveStatic(res, "control.html");
+  }
   if (p === "/join") return serveStatic(res, "join.html");
 
   if (p === "/api/info") return json(res, 200, { audienceUrl: AUDIENCE_URL, mock: true });
@@ -215,6 +224,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (p.startsWith("/api/run/") && req.method === "POST") {
+    if (!keyOk(url)) return json(res, 403, { ok:false, error:"presenter only" });
     if (running) return json(res, 200, { ok:false, error:"already running" });
     const id = p.split("/").pop();
     let idea;
@@ -231,7 +241,7 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`\n  Live Build (mock) running`);
-  console.log(`  audience : ${AUDIENCE_URL}`);
-  console.log(`  stage    : http://localhost:${PORT}/stage`);
-  console.log(`  control  : http://localhost:${PORT}/control\n`);
+  console.log(`  audience : ${AUDIENCE_URL}          <- the QR points here`);
+  console.log(`  stage    : http://localhost:${PORT}/stage           <- the projector`);
+  console.log(`  control  : http://localhost:${PORT}/control?key=${KEY}  <- YOU (keep this one private)\n`);
 });

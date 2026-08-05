@@ -91,10 +91,13 @@
       q.appendChild(el);
     });
   }
+  // the presenter key travels with this page's URL, so Run stays presenter-only
+  const KEY = new URLSearchParams(location.search).get("key") || "";
   async function run(id){
     running = id;
     document.getElementById("status").textContent = "Building on the stage…";
-    await fetch("/api/run/"+id, {method:"POST"});
+    const r = await fetch("/api/run/"+id+"?key="+encodeURIComponent(KEY), {method:"POST"});
+    if (r.status === 403){ running=null; document.getElementById("status").textContent = "Presenter key missing. Open the control URL from your terminal."; }
   }
   document.getElementById("demo").onclick = () => run("demo");
 

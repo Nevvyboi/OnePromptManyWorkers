@@ -77,8 +77,8 @@ ollama pull qwen2.5:3b
 mvn spring-boot:run
 ```
 
-Then open **`/stage`** on the projector, **`/control`** on your laptop, and show
-**`/join`** for the QR. No Java handy? Preview the whole experience in Node:
+The server prints three URLs. Put **`/stage`** on the projector, keep the private
+**`/control?key=…`** one on your laptop, and show **`/join`** for the QR. No Java handy? Preview the whole experience in Node:
 
 ```bash
 cd live-build/mock && PORT=5099 node server.js

@@ -24,6 +24,12 @@ import com.bbd.live.Model.*;
 @Service
 public class CrewService {
 
+    /** Presenter key. Auto-generated unless you pin one with --live.key=... */
+    @Value("${live.key:}") String configuredKey;
+    private final String key = Long.toString(Math.abs(new java.security.SecureRandom().nextLong()), 36).substring(0, 6);
+    public String controlKey() { return (configuredKey == null || configuredKey.isBlank()) ? key : configuredKey; }
+    public boolean keyOk(String given) { return controlKey().equals(given); }
+
     @Value("${live.mock:false}") boolean mock;
     @Value("${live.model:qwen2.5:3b}") String modelName;
     @Value("${live.ollama:http://localhost:11434}") String ollamaUrl;

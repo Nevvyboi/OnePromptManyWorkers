@@ -42,7 +42,7 @@ including going backwards. A net, not a line.
 |---|---|---|
 | `http://<laptop-ip>:8080/` | audience phones (the QR) | submit an idea |
 | `http://localhost:8080/stage` | the projector | the crew + the page building live |
-| `http://localhost:8080/control` | you | the QR, the queue, the Run button |
+| `http://localhost:8080/control?key=…` | you | the QR, the queue, the Run button (key printed in your terminal) |
 
 ## Before the talk
 
@@ -51,7 +51,7 @@ your *laptop* to that hotspot. The audience joins the same hotspot. Everyone is
 now on one little network with your laptop. The model still runs offline on the
 laptop; the data plan only creates the network.
 
-> The `/control` page shows the exact QR and URL, auto-detected from whatever
+> The `/control` and `/join` pages show the exact QR and URL, auto-detected from whatever
 > network you are on. No editing needed.
 
 **2. The model (for the real thing).**
@@ -62,21 +62,21 @@ ollama run qwen2.5:3b "hi"   # warm it up
 
 **3. Rehearse in mock mode first** (no Ollama, instant, canned outputs):
 ```bash
-cd bbd-live
+cd live-build
 mvn spring-boot:run -Dspring-boot.run.arguments=--live.mock=true
 ```
-Open `/control`, click **Run a built-in demo idea**, watch `/stage`. This is also
+Open the printed `/control?key=…` URL, click **Run a built-in demo idea**, watch `/stage`. This is also
 your on-stage safety net.
 
 ## On stage (the real thing)
 
 ```bash
-cd bbd-live
+cd live-build
 mvn spring-boot:run
 ```
 
-1. Put `/stage` on the projector, keep `/control` on your laptop (or phone).
-2. Show the QR (it's on `/control`, and you can drop `/api/qr` on a slide).
+1. Put `/stage` on the projector, keep `/control?key=…` on your laptop (never show it).
+2. Show the QR: project `/join`, or drop `/api/qr` on a slide.
 3. People submit. Ideas appear in `/control`.
 4. Pick a good one, hit **Run**. The crew assembles the page live.
 5. Read the Skeptic's line out loud. It always gets a laugh.
@@ -86,6 +86,21 @@ mvn spring-boot:run
 Each agent has a house fallback, so a single bad response never breaks the build.
 If Ollama is down entirely, flip to mock mode (above) and the show goes on. You can
 even say it: "small local models improvise, so I gave the crew a safety net."
+
+## Presenter key
+
+The room is on your hotspot, and at a dev meetup somebody *will* try `/control`.
+So the presenter panel and the Run endpoint are behind a key. On startup the
+server prints three URLs and only one is private:
+
+```
+audience : http://172.20.10.3:8080/            <- the QR points here
+stage    : http://localhost:8080/stage         <- the projector
+control  : http://localhost:8080/control?key=a9f3k2   <- YOU, keep this private
+```
+
+Anyone without the key gets a polite "presenter only" page, and a build cannot be
+triggered from a phone. Pin your own key with `--live.key=whatever` if you prefer.
 
 ## Limits and moderation
 
@@ -111,10 +126,10 @@ building at a time and your own curation are the real safety.
 
 Same frontend, same protocol, canned crew, zero Java or Ollama:
 ```bash
-cd bbd-live/mock
+cd live-build/mock
 PORT=5099 node server.js
 ```
-Then open `http://localhost:5099/stage` and `/control`. Great for showing someone
+Then open `http://localhost:5099/stage` and the printed `/control?key=…`. Great for showing someone
 the experience on any laptop.
 
 ## How it maps to the talk
@@ -127,10 +142,10 @@ the experience on any laptop.
 ## Layout
 
 ```
-bbd-live/
+live-build/
   pom.xml
   src/main/java/com/bbd/live/
-    LiveApplication.java     Spring Boot entry + /stage /control routes
+    LiveApplication.java     Spring Boot entry, routes, the keyed /control gate
     ApiController.java        submit / queue / run / events(SSE) / qr / info
     CrewService.java          plan -> dispatch -> synthesize, mock + live, fallbacks
     Agents.java               Copywriter / Designer / Skeptic (LangChain4j)
@@ -139,7 +154,9 @@ bbd-live/
   src/main/resources/
     static/index.html         audience form
     static/stage.html         the projector view
-    static/control.html       presenter control
+    static/control.html       presenter control (keyed)
+    static/join.html          full-screen join QR for the projector
+    static/presenter-only.html  shown when the key is missing
     application.properties
   mock/server.js              Node mirror for a no-Java preview
 ```

@@ -23,7 +23,10 @@
   textarea,input{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:14px;color:var(--paper);font-family:var(--sans);font-size:1.1rem;padding:16px 16px;resize:none;outline:none;transition:border-color .2s}
   textarea:focus,input:focus{border-color:var(--amber)}
   textarea{min-height:118px;line-height:1.4}
-  .count{font-family:var(--mono);font-size:.72rem;color:var(--muted);text-align:right;margin-top:.4rem}
+  .count{font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-top:.4rem;display:flex;justify-content:space-between;gap:.8rem;align-items:baseline}
+  .count .egs{color:#4a5060;font-size:.68rem;line-height:1.3}
+  .sent{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:.9rem 1rem;font-size:.95rem;line-height:1.45;color:var(--paper);max-width:30ch}
+  .sent .lbl{display:block;font-family:var(--mono);font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem}
   button{width:100%;margin-top:1.4rem;background:var(--amber);color:#1a1204;border:none;border-radius:14px;font-family:var(--sans);font-weight:800;font-size:1.15rem;padding:17px;cursor:pointer;transition:transform .1s,opacity .2s}
   button:active{transform:scale(.98)}
   button:disabled{opacity:.5}
@@ -49,12 +52,12 @@
   <div class="eyebrow"><span class="d"></span> One Prompt. Many Workers.</div>
 
   <div class="form" id="form">
-    <h1>Give the crew<br>an <em>idea.</em></h1>
+    <h1>Give the crew <br>an <em>idea.</em></h1>
     <p class="sub">Type any product idea in one line. A crew of AI agents will build a landing page for it, live, on the big screen.</p>
 
     <label for="idea">Your idea</label>
-    <textarea id="idea" maxlength="120" placeholder="an app that waters your plants when you forget"></textarea>
-    <div class="count"><span id="count">0</span>/120</div>
+    <textarea id="idea" maxlength="120" placeholder="type your product idea here"></textarea>
+    <div class="count"><span class="egs">e.g. something for load-shedding, traffic, coffee, your gran</span><span><span id="count">0</span>/120</span></div>
 
     <label for="name">Your name <span style="color:#4a5060">(optional)</span></label>
     <input id="name" maxlength="24" placeholder="so we can credit you on screen">
@@ -69,7 +72,8 @@
   <div class="done" id="done">
     <div class="check"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></div>
     <h2>You're in.</h2>
-    <p id="donemsg">Watch the screen. The crew might build yours next.</p>
+    <div class="sent"><span class="lbl">you sent</span><span id="sentText"></span></div>
+    <p id="donemsg">Keep this screen open and watch the big screen. The speaker picks the ones to build, so yours might come up.</p>
     <div class="pos" id="pos"></div>
     <button class="again" id="again">Send another idea</button>
   </div>
@@ -97,15 +101,16 @@
       });
       const d = await r.json();
       if (!d.ok){ err.textContent = d.error || "Something went wrong. Try again."; $("#send").disabled=false; return; }
-      $("#pos").textContent = d.position ? `#${d.position} in the queue` : "";
-      $("#donemsg").textContent = d.mock ? "Watch the screen. The crew might build yours next." : "Watch the screen. The crew might build yours next.";
+      $("#sentText").textContent = text;
+      $("#pos").textContent = d.position ? `${d.position} idea${d.position === 1 ? "" : "s"} sent by the room so far` : "";
       $("#form").classList.add("hide");
       $("#done").classList.add("show");
     }catch(e){ err.textContent = "Can't reach the server. Are you on the room's Wi-Fi?"; $("#send").disabled=false; }
   }
 
   $("#again").addEventListener("click", () => {
-    idea.value = ""; name.value=""; count.textContent="0"; $("#send").disabled=false;
+    idea.value = ""; count.textContent="0"; $("#send").disabled=false; err.textContent="";
+    // keep the name: they are the same person, and we credit them on screen
     $("#done").classList.remove("show"); $("#form").classList.remove("hide"); idea.focus();
   });
 </script>

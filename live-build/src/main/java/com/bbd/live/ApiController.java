@@ -3,6 +3,7 @@ package com.bbd.live;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -36,8 +37,13 @@ public class ApiController {
         return (fwd != null && !fwd.isBlank()) ? fwd.split(",")[0].trim() : r.getRemoteAddr();
     }
 
+    /** Presenter only. The room is on your hotspot and a dev will find this. */
     @PostMapping("/run/{id}")
-    public Map<String, Object> run(@PathVariable String id) { return crew.run(id); }
+    public ResponseEntity<Map<String, Object>> run(@PathVariable String id,
+                                                   @RequestParam(required = false) String key) {
+        if (!crew.keyOk(key)) return ResponseEntity.status(403).body(Map.of("ok", false, "error", "presenter only"));
+        return ResponseEntity.ok(crew.run(id));
+    }
 
     @GetMapping("/events")
     public SseEmitter events() { return crew.subscribe(); }
