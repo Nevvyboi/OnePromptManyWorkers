@@ -137,6 +137,12 @@ public final class PageWriter {
         String display = bodyFont;
         if (serif) bodyFont = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif";
         String tracking = serif ? "-.012em" : "-.035em";
+        // longer headline, smaller type and a wider measure, so it lands in two lines
+        int hl = c.headline() == null ? 0 : c.headline().length();
+        String h1size = hl > 46 ? "clamp(1.9rem,4vw,2.9rem)"
+                      : hl > 30 ? "clamp(2.2rem,5.4vw,3.8rem)"
+                      :           "clamp(2.5rem,7.2vw,5.2rem)";
+        String h1measure = hl > 46 ? "24ch" : hl > 30 ? "19ch" : "15ch";
         String weight = serif ? "600" : "800";
 
         String feats = c.features() == null ? "" : c.features().stream().map(x ->
@@ -187,6 +193,8 @@ public final class PageWriter {
                 .replace("__BODYFONT__", bodyFont)
                 .replace("__DISPLAY__", display)
                 .replace("__TRACKING__", tracking)
+                .replace("__H1SIZE__", h1size)
+                .replace("__H1MEASURE__", h1measure)
                 .replace("__WEIGHT__", weight)
                 .replace("__TITLE__", esc(name) + " &#183; " + esc(c.headline()))
                 .replace("__DESC__", esc(c.subhead()))
@@ -255,7 +263,8 @@ public final class PageWriter {
        transition:transform .18s cubic-bezier(.2,.7,.2,1),filter .18s}
   .btn:hover{transform:translateY(-1px);filter:brightness(1.07)}
 
-  .hero{position:relative;padding:clamp(3.2rem,10vh,7rem) 0 clamp(2.6rem,7vh,5rem)}
+  /* the glow and the artwork are decoration: they must not widen the page */
+  .hero{position:relative;overflow:hidden;padding:clamp(3.2rem,10vh,7rem) 0 clamp(2.6rem,7vh,5rem)}
   .field{position:absolute;inset:-12% -22% auto auto;width:min(76vw,900px);height:min(72vh,640px);
          opacity:.5;z-index:0;pointer-events:none;
          mask-image:radial-gradient(70% 70% at 62% 42%,#000 30%,transparent 78%);
@@ -268,8 +277,10 @@ public final class PageWriter {
            font-size:.66rem;letter-spacing:.22em;text-transform:uppercase;color:var(--primary);
            border:1px solid color-mix(in srgb,var(--primary) 45%,transparent);
            border-radius:999px;padding:.34rem .8rem;margin-bottom:1.5rem}
+  /* a four line hero headline is a type-scale error, not a copy error, so the
+     scale is set from the length the copywriter actually produced */
   h1{font-family:var(--display);font-weight:__WEIGHT__;letter-spacing:__TRACKING__;
-     font-size:clamp(2.5rem,7.2vw,5.2rem);line-height:.97;max-width:15ch;text-wrap:balance}
+     font-size:__H1SIZE__;line-height:1.02;max-width:__H1MEASURE__;text-wrap:balance}
   .lede{font-size:clamp(1.06rem,1.7vw,1.36rem);color:var(--muted);margin-top:1.35rem;
         max-width:44ch;text-wrap:pretty}
   .actions{display:flex;align-items:center;gap:1.1rem;flex-wrap:wrap;margin-top:2.1rem}
@@ -364,8 +375,9 @@ public final class PageWriter {
          display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}
   footer b{color:var(--ink);font-weight:600}
 
-  .rise{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s cubic-bezier(.2,.7,.2,1)}
-  .rise.in{opacity:1;transform:none}
+  /* motion is an enhancement: without script, everything is simply visible */
+  .js .rise{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s cubic-bezier(.2,.7,.2,1)}
+  .js .rise.in{opacity:1;transform:none}
   @media(prefers-reduced-motion:reduce){
     *{animation:none!important;transition:none!important}
     .rise{opacity:1;transform:none}
@@ -456,6 +468,9 @@ public final class PageWriter {
   const nav = document.getElementById("nav");
   addEventListener("scroll", () => nav.classList.toggle("stuck", scrollY > 12), { passive: true });
 
+  // only now is it safe to hide things until they scroll into view
+  document.documentElement.classList.add("js");
+
   const io = new IntersectionObserver((es, o) => es.forEach(e => {
     if (e.isIntersecting) { e.target.classList.add("in"); o.unobserve(e.target); }
   }), { rootMargin: "0px 0px -8% 0px" });
@@ -463,6 +478,9 @@ public final class PageWriter {
     el.style.transitionDelay = (i % 3) * 70 + "ms";
     io.observe(el);
   });
+
+  // safety net: if anything goes wrong with the observer, show the page anyway
+  setTimeout(() => document.querySelectorAll(".rise:not(.in)").forEach(el => el.classList.add("in")), 2500);
 
   document.getElementById("f").addEventListener("submit", e => {
     e.preventDefault();

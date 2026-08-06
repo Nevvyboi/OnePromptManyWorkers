@@ -69,6 +69,24 @@
   .ag.done .st{color:var(--ac)}
   .ag .help{display:block;font-family:var(--mono);font-size:.63rem;color:var(--ac);margin-top:.15rem}
 
+  /* thinking: three dots breathing, plus what it is currently doing */
+  .ag .think{display:none;align-items:center;gap:.3rem;margin-top:.25rem}
+  .ag.working .think,.ag.assisting .think{display:flex}
+  .ag .think i{width:5px;height:5px;border-radius:50%;background:var(--ac);opacity:.35;
+               animation:blink 1.1s infinite}
+  .ag .think i:nth-child(2){animation-delay:.16s}
+  .ag .think i:nth-child(3){animation-delay:.32s}
+  @keyframes blink{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-2px)}}
+  .ag .think em{font-style:normal;font-family:var(--mono);font-size:.62rem;color:var(--ac);opacity:.85;margin-left:.2rem}
+
+  /* what the agent actually handed over, shown the moment it is done */
+  .ag .made{display:none;margin-top:.3rem;font-size:.74rem;line-height:1.35;color:var(--paper);
+            border-left:2px solid var(--ac);padding-left:.55rem;animation:madein .45s ease both}
+  .ag.done .made:not(:empty){display:block}
+  @keyframes madein{from{opacity:0;transform:translateX(-4px)}to{opacity:1;transform:none}}
+  .ag .made .sw{display:inline-flex;gap:.25rem;vertical-align:-2px;margin-right:.35rem}
+  .ag .made .sw b{width:12px;height:12px;border-radius:3px;display:inline-block}
+
   /* ---------- the build frame ---------- */
   .build{min-height:0;display:flex;flex-direction:column}
   .frame{flex:1;border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;background:#fff;box-shadow:0 40px 90px -50px #000;min-height:0}
@@ -237,7 +255,10 @@
       row.className = "ag"; row.id = "ag-"+n.key;
       row.style.setProperty("--ac", COLORS[n.key]||"#8A8FA0");
       row.innerHTML = `<span class="dot"></span>
-        <span><span class="nm">${meta.name}</span><span class="job">${meta.job}</span><span class="help" id="help-${n.key}"></span></span>
+        <span><span class="nm">${meta.name}</span><span class="job">${meta.job}</span>
+          <span class="think" id="think-${n.key}"><i></i><i></i><i></i><em></em></span>
+          <span class="made" id="made-${n.key}"></span>
+          <span class="help" id="help-${n.key}"></span></span>
         <span class="stwrap"><span class="st">waiting</span><span class="ms" id="ms-${n.key}"></span></span>`;
       crewEl.appendChild(row);
     });
@@ -252,6 +273,15 @@
       row.className = "ag on " + state;
       row.querySelector(".st").textContent = STATUS[state] || state;
     }
+  }
+  function setThinking(key, note){
+    const el = document.querySelector("#think-" + key + " em");
+    if (el) el.textContent = note || "";
+  }
+  // what this agent handed over, in the shape that reads fastest from the back row
+  function setMade(key, html){
+    const el = document.getElementById("made-" + key);
+    if (el && html) el.innerHTML = html;
   }
   function setHelp(key, text){
     const el = document.getElementById("help-"+key);
@@ -362,7 +392,10 @@
   es.addEventListener("tally", e => { document.getElementById("tally").textContent = J(e).total; });
   es.addEventListener("run-start", e => { const d=J(e); resetStage(d.idea, d.name); });
   es.addEventListener("graph", e => { const d=J(e); drawGraph(d.nodes||[], d.edges||[]); });
-  es.addEventListener("agent-state", e => { const d=J(e); setAgent(d.key, d.state, d.note); });
+  es.addEventListener("agent-state", e => {
+    const d=J(e); setAgent(d.key, d.state, d.note);
+    if (d.state === "working" || d.state === "assisting") setThinking(d.key, d.note);
+  });
   es.addEventListener("flow", e => {
     const d=J(e);
     pulse(d.from, d.to, d.what);
@@ -371,12 +404,23 @@
     setHelp(d.to, "got " + (d.what||"work") + " from " + giver);
   });
   es.addEventListener("worker-done", e => {
-    const d=J(e);
-    if(d.key==="namer" && d.payload) applyName(d.payload);
-    if(d.key==="illustrator" && d.payload) applyArt(d.payload);
-    if(d.key==="copywriter" && d.payload) applyCopy(d.payload);
-    if(d.key==="designer" && d.payload) applyDesign(d.payload);
-    if(d.key==="skeptic" && d.payload) applySkeptic(d.payload.note || d.payload);
+    const d=J(e), p=d.payload;
+    if(d.key==="namer" && p) applyName(p);
+    if(d.key==="illustrator" && p) applyArt(p);
+    if(d.key==="copywriter" && p) applyCopy(p);
+    if(d.key==="designer" && p) applyDesign(p);
+    if(d.key==="skeptic" && p) applySkeptic(p.note || p);
+
+    // show the room the actual artefact, not just a tick
+    if (!p) { setMade(d.key, "page assembled"); return; }
+    if (d.key==="namer")       setMade(d.key, "&ldquo;" + esc(p.name || "") + "&rdquo;");
+    if (d.key==="copywriter")  setMade(d.key, "&ldquo;" + esc(p.headline || "") + "&rdquo;");
+    if (d.key==="designer")    setMade(d.key,
+        `<span class="sw"><b style="background:${esc(p.bg)}"></b><b style="background:${esc(p.primary)}"></b><b style="background:${esc(p.accent)}"></b></span>${esc(p.primary || "")}`);
+    if (d.key==="illustrator") setMade(d.key, esc(p.kind || "") + " artwork");
+    if (d.key==="pricer" && p.pricing) setMade(d.key, p.pricing.map(t=>esc(t.price)).join(" · "));
+    if (d.key==="reviewer")    setMade(d.key, "&ldquo;" + esc(p.value || "") + "&rdquo;");
+    if (d.key==="skeptic")     setMade(d.key, esc((p.note || "").slice(0, 90)) + "…");
   });
   // how long each agent actually took, and the whole run
   es.addEventListener("timing", e => {
@@ -384,7 +428,11 @@
     if (d.key === "total") { const t = document.getElementById("runTotal"); if (t) t.textContent = "built in " + secs; return; }
     const el = document.getElementById("ms-" + d.key); if (el) el.textContent = secs;
   });
-  es.addEventListener("revise", e => applyRevise(J(e)));
+  es.addEventListener("revise", e => {
+    const d = J(e);
+    applyRevise(d);
+    setMade("copywriter", "&ldquo;" + esc(d.value || "") + "&rdquo;<br><span style=\'opacity:.6;font-size:.66rem\'>rewritten after the " + esc(d.by || "") + "</span>");
+  });
   es.onerror = () => {/* auto-reconnects */};
 </script>
 </body>

@@ -100,6 +100,15 @@ public final class TasteGuard {
             }
         }
 
+        // 10. a local model sprinkles emoji into copy; on a product page it reads as unserious
+        var emoji = Pattern.compile("[\\x{1F300}-\\x{1FAFF}\\x{2600}-\\x{27BF}\\x{FE0F}]");
+        if (emoji.matcher(visible(h)).find()) {
+            h = emoji.matcher(h).replaceAll("").replaceAll("[ \\t]{2,}", " ").replaceAll("\\s+([.,!?])", "$1");
+            if (!emoji.matcher(visible(h)).find()) repaired++;
+            else found.add(new Violation("emoji", "emoji in visible copy",
+                    "emoji in product copy reads as unserious"));
+        }
+
         // 9. the words a model reaches for when it has nothing to say
         var filler = Pattern.compile("(?i)\\b(elevate|seamless|unleash|revolutionis|revolutioniz|next[- ]gen|supercharge)\\w*")
                 .matcher(visible(h));

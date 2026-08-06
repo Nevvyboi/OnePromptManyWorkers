@@ -72,10 +72,17 @@ function artSvg(a) {
 
 // A serif palette gets a serif display; the rest get a tight, heavy sans.
 // The pairing is what stops six palettes looking like one template.
-function fonts(p) {
+function fonts(p, headline) {
+  const n = (headline || "").length;
+  // longer headline, smaller type and a wider measure, so it lands in two lines
+  const h1size = n > 46 ? "clamp(1.9rem,4vw,2.9rem)"
+               : n > 30 ? "clamp(2.2rem,5.4vw,3.8rem)"
+               :          "clamp(2.5rem,7.2vw,5.2rem)";
+  const h1measure = n > 46 ? "24ch" : n > 30 ? "19ch" : "15ch";
   const body = p.font || "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif";
   const serif = /georgia|times|palatino|serif/i.test(body);
   return {
+    h1size, h1measure,
     body: serif ? "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif" : body,
     display: serif ? body : body,
     tracking: serif ? "-.012em" : "-.035em",
@@ -87,7 +94,7 @@ function renderPage(item) {
   const R = item.result || {}, c = R.copy || {}, p = R.palette || {};
   const name = (R.product && R.product.name) || "This";
   const who = (item.name || "").trim();
-  const tiers = R.pricing || [], faq = R.faq || [], f = fonts(p);
+  const tiers = R.pricing || [], faq = R.faq || [], f = fonts(p, c.headline);
   const secs = item.ms ? (item.ms / 1000).toFixed(1) + "s" : "";
 
   // the crew's own account of what it made, in their words
@@ -147,7 +154,8 @@ function renderPage(item) {
   .btn:hover{transform:translateY(-1px);filter:brightness(1.07)}
 
   /* ---------- hero ---------- */
-  .hero{position:relative;padding:clamp(3.2rem,10vh,7rem) 0 clamp(2.6rem,7vh,5rem)}
+  /* the glow and the artwork are decoration: they must not widen the page */
+  .hero{position:relative;overflow:hidden;padding:clamp(3.2rem,10vh,7rem) 0 clamp(2.6rem,7vh,5rem)}
   .field{position:absolute;inset:-12% -22% auto auto;width:min(76vw,900px);height:min(72vh,640px);
          opacity:.5;filter:blur(.4px);z-index:0;pointer-events:none;
          mask-image:radial-gradient(70% 70% at 62% 42%,#000 30%,transparent 78%);
@@ -160,8 +168,10 @@ function renderPage(item) {
            font-size:.66rem;letter-spacing:.22em;text-transform:uppercase;color:var(--primary);
            border:1px solid color-mix(in srgb,var(--primary) 45%,transparent);
            border-radius:999px;padding:.34rem .8rem;margin-bottom:1.5rem}
+  /* a four line hero headline is a type-scale error, not a copy error, so the
+     scale is set from the length the copywriter actually produced */
   h1{font-family:var(--display);font-weight:${f.weight};letter-spacing:${f.tracking};
-     font-size:clamp(2.5rem,7.2vw,5.2rem);line-height:.97;max-width:15ch;text-wrap:balance}
+     font-size:${f.h1size};line-height:1.02;max-width:${f.h1measure};text-wrap:balance}
   .lede{font-size:clamp(1.06rem,1.7vw,1.36rem);color:var(--muted);margin-top:1.35rem;
         max-width:44ch;text-wrap:pretty}
   .actions{display:flex;align-items:center;gap:1.1rem;flex-wrap:wrap;margin-top:2.1rem}
@@ -265,8 +275,9 @@ function renderPage(item) {
   footer b{color:var(--ink);font-weight:600}
 
   /* motion, kept quiet and switched off on request */
-  .rise{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s cubic-bezier(.2,.7,.2,1)}
-  .rise.in{opacity:1;transform:none}
+  /* motion is an enhancement: without script, everything is simply visible */
+  .js .rise{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s cubic-bezier(.2,.7,.2,1)}
+  .js .rise.in{opacity:1;transform:none}
   @media(prefers-reduced-motion:reduce){
     *{animation:none!important;transition:none!important}
     .rise{opacity:1;transform:none}
@@ -370,6 +381,9 @@ function renderPage(item) {
   addEventListener("scroll", () => nav.classList.toggle("stuck", scrollY > 12), { passive: true });
 
   // one quiet reveal per element, then the observer lets go
+  // only now is it safe to hide things until they scroll into view
+  document.documentElement.classList.add("js");
+
   const io = new IntersectionObserver((es, o) => es.forEach(e => {
     if (e.isIntersecting) { e.target.classList.add("in"); o.unobserve(e.target); }
   }), { rootMargin: "0px 0px -8% 0px" });
@@ -377,6 +391,9 @@ function renderPage(item) {
     el.style.transitionDelay = (i % 3) * 70 + "ms";
     io.observe(el);
   });
+
+  // safety net: if anything goes wrong with the observer, show the page anyway
+  setTimeout(() => document.querySelectorAll(".rise:not(.in)").forEach(el => el.classList.add("in")), 2500);
 
   document.getElementById("f").addEventListener("submit", e => {
     e.preventDefault();

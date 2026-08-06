@@ -82,6 +82,15 @@ const RULES = [
     },
   },
   {
+    id: "emoji",
+    why: "a model sprinkles emoji into copy; on a product page it reads as unserious",
+    check(h, text) {
+      const n = (text.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu) || []).length;
+      return n ? { count: n, detail: `${n} in visible copy` } : null;
+    },
+    fix: h => h.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, "").replace(/[ \t]{2,}/g, " ").replace(/\s+([.,!?])/g, "$1"),
+  },
+  {
     id: "filler-verbs",
     why: "elevate, seamless, unleash and revolutionise are the words models reach for when they have nothing to say",
     check(h, text) {
