@@ -57,10 +57,16 @@ public class LiveApplication {
             Model.Idea idea = crew.built(id);
             if (idea == null) return org.springframework.http.ResponseEntity.status(404)
                     .body("<body style='font-family:system-ui;padding:3rem'>No page for that id yet.</body>");
+            // nothing is served without passing the taste guard first
+            TasteGuard.Report first = TasteGuard.audit(PageWriter.render(idea));
+            TasteGuard.Report guard = TasteGuard.audit(PageWriter.render(idea, first.summary()));
+            if (!guard.passed())
+                System.out.println("  taste guard flagged: "
+                        + guard.violations().stream().map(TasteGuard.Violation::id).toList());
             var b = org.springframework.http.ResponseEntity.ok();
             if ("1".equals(download))
                 b = b.header("Content-Disposition", "attachment; filename=\"" + PageWriter.slug(idea.result) + ".html\"");
-            return b.body(PageWriter.render(idea));
+            return b.body(guard.html());
         }
     }
 

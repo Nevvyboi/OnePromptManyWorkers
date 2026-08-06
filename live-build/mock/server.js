@@ -8,6 +8,7 @@ const path = require("path");
 const os = require("os");
 const QRCode = require("qrcode");
 const { renderPage } = require("./page");
+const { audit } = require("./taste");
 
 const PORT = process.env.PORT || 4000;
 const STATIC = path.join(__dirname, "..", "src", "main", "resources", "static");
@@ -178,8 +179,8 @@ function makeReview(idea) {
     field: "cta",
     value: pick([
       "Try it in 30 seconds", "Get it working today", "See it in action",
-      "Set it up now, thank yourself later", "Take it for a spin",
-      "Start free, no card", "Let it do the remembering", "Give it one job",
+      "Set it up now", "Take it for a spin",
+      "Start free, no card", "Let it remember", "Give it one job",
     ], idea + "r"),
     note: "the call to action was generic",
   };
@@ -450,7 +451,10 @@ const server = http.createServer(async (req, res) => {
     const id = p.split("/")[2];
     const it = ideas.find(i => String(i.id) === id && i.result && !i.hidden);
     if (!it) { res.writeHead(404, {"Content-Type":"text/html"}); return res.end("<body style='font-family:system-ui;padding:3rem'>No page for that id yet.</body>"); }
-    const html = renderPage({ name: it.name, idea: it.text, result: it.result });
+    // nothing is served without passing the taste guard first
+    const checked = audit(renderPage({ name: shownName(it), idea: it.text, result: it.result, ms: it.ms }));
+    const html = checked.html;
+    if (!checked.passed) console.log("  taste guard flagged:", checked.violations.map(v => v.id).join(", "));
     const slug = (it.result.product.name || "page").toLowerCase().replace(/[^a-z0-9]+/g, "-");
     const headers = { "Content-Type": "text/html; charset=utf-8" };
     if (url.searchParams.get("download") === "1") headers["Content-Disposition"] = `attachment; filename="${slug}.html"`;

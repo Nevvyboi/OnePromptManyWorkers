@@ -106,7 +106,7 @@ function renderPage(item) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${esc(name)} — ${esc(c.headline || "")}</title>
+<title>${esc(name)} &#183; ${esc(c.headline || "")}</title>
 <meta name="description" content="${esc(c.subhead || "")}">
 <style>
   :root{
@@ -138,8 +138,6 @@ function renderPage(item) {
   .nav .row{display:flex;align-items:center;gap:clamp(.9rem,2.4vw,2rem);padding:.95rem 0}
   .logo{font-family:var(--display);font-weight:${f.weight};letter-spacing:${f.tracking};
         font-size:1.12rem;margin-right:auto;display:flex;align-items:baseline;gap:.12rem}
-  .logo i{width:7px;height:7px;border-radius:50%;background:var(--primary);display:inline-block;
-          transform:translateY(-.05em)}
   .nav a.lnk{text-decoration:none;color:var(--muted);font-size:.9rem}
   .nav a.lnk:hover{color:var(--ink)}
   @media(max-width:640px){.nav a.lnk{display:none}}
@@ -162,7 +160,6 @@ function renderPage(item) {
            font-size:.66rem;letter-spacing:.22em;text-transform:uppercase;color:var(--primary);
            border:1px solid color-mix(in srgb,var(--primary) 45%,transparent);
            border-radius:999px;padding:.34rem .8rem;margin-bottom:1.5rem}
-  .eyebrow i{width:5px;height:5px;border-radius:50%;background:var(--primary)}
   h1{font-family:var(--display);font-weight:${f.weight};letter-spacing:${f.tracking};
      font-size:clamp(2.5rem,7.2vw,5.2rem);line-height:.97;max-width:15ch;text-wrap:balance}
   .lede{font-size:clamp(1.06rem,1.7vw,1.36rem);color:var(--muted);margin-top:1.35rem;
@@ -189,10 +186,16 @@ function renderPage(item) {
   .feature h3{font-family:var(--display);font-size:1.16rem;font-weight:${f.weight};
               letter-spacing:-.01em;margin-bottom:.25rem}
   .feature p{color:var(--muted);max-width:56ch}
+  /* deliberately not three equal columns: the first feature leads, the other
+     two sit beside it, so the eye has somewhere to start */
   @media(min-width:860px){
-    .features{display:grid;grid-template-columns:repeat(3,1fr);gap:0 2rem}
+    .features{display:grid;grid-template-columns:1.35fr 1fr;gap:2.4rem 3rem;align-items:start}
     .feature{border-top:0;padding:0;display:block}
     .feature .badge{margin-bottom:1rem}
+    .feature:first-child{grid-row:span 2;align-self:stretch;
+      border-right:1px solid var(--line);padding-right:3rem}
+    .feature:first-child h3{font-size:1.5rem}
+    .feature:first-child p{font-size:1.05rem}
   }
 
   /* pricing */
@@ -275,7 +278,7 @@ function renderPage(item) {
 
 <nav class="nav" id="nav">
   <div class="wrap row">
-    <span class="logo">${esc(name)}<i></i></span>
+    <span class="logo">${esc(name)}</span>
     <a class="lnk" href="#what">What it does</a>
     <a class="lnk" href="#pricing">Pricing</a>
     <a class="lnk" href="#questions">Questions</a>
@@ -287,19 +290,18 @@ function renderPage(item) {
   <div class="glow"></div>
   ${artSvg(R.art)}
   <div class="wrap">
-    <span class="eyebrow"><i></i>${esc(c.badge || "introducing")}</span>
+    <span class="eyebrow">${esc(c.badge || "introducing")}</span>
     <h1>${esc(c.headline || "")}</h1>
     <p class="lede">${esc(c.subhead || "")}</p>
     <div class="actions">
       <a class="btn lg" href="#get">${esc(c.cta || "Get started")}</a>
-      <span class="fine">No card. Runs on your own machine.</span>
     </div>
   </div>
 </header>
 
 <section class="band" id="what">
   <div class="wrap">
-    <div class="head"><h2>What it does</h2><span class="note">three things, no more</span></div>
+    <div class="head"><h2>What it does</h2></div>
     <div class="features">
       ${(c.features || []).map(x => `<article class="feature rise">
         <span class="badge">${svgIcon(x.title + " " + x.body)}</span>
@@ -311,7 +313,7 @@ function renderPage(item) {
 
 <section class="band" id="pricing">
   <div class="wrap">
-    <div class="head"><h2>Pricing</h2><span class="note">cancel whenever</span></div>
+    <div class="head"><h2>Pricing</h2></div>
     <div class="tiers">
       ${tiers.map(t => `<article class="tier rise${t.featured ? " pick" : ""}">
         <div class="tier-tag">${t.featured ? "most people pick this" : ""}</div>
@@ -328,7 +330,7 @@ function renderPage(item) {
 
 <section class="band" id="questions">
   <div class="wrap">
-    <div class="head"><h2>Questions</h2><span class="note">asked before you asked</span></div>
+    <div class="head"><h2>Questions</h2></div>
     <div class="qs">
       ${faq.map(q => `<details class="rise"><summary>${esc(q.q)}</summary><p>${esc(q.a)}</p></details>`).join("\n      ")}
     </div>

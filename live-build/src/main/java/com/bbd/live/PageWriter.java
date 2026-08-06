@@ -119,7 +119,9 @@ public final class PageWriter {
         return s.isBlank() ? "page" : s;
     }
 
-    public static String render(Idea idea) {
+    public static String render(Idea idea) { return render(idea, ""); }
+
+    public static String render(Idea idea, String guardSummary) {
         Result r = idea.result;
         Copy c = r.copy();
         Palette p = r.palette();
@@ -186,7 +188,7 @@ public final class PageWriter {
                 .replace("__DISPLAY__", display)
                 .replace("__TRACKING__", tracking)
                 .replace("__WEIGHT__", weight)
-                .replace("__TITLE__", esc(name) + " &mdash; " + esc(c.headline()))
+                .replace("__TITLE__", esc(name) + " &#183; " + esc(c.headline()))
                 .replace("__DESC__", esc(c.subhead()))
                 .replace("__NAME__", esc(name))
                 .replace("__CTA__", esc(cta))
@@ -199,7 +201,8 @@ public final class PageWriter {
                 .replace("__FAQ__", faqHtml)
                 .replace("__RECEIPT__", rec.toString())
                 .replace("__SECS__", secs.isBlank() ? "" : ", in <b>" + secs + "</b>")
-                .replace("__WHO__", esc(who));
+                .replace("__WHO__", esc(who))
+                .replace("__GUARD__", esc(guardSummary.isBlank() ? "not run" : guardSummary));
     }
 
     private static String nz(String v, String d) { return v == null || v.isBlank() ? d : v; }
@@ -244,8 +247,6 @@ public final class PageWriter {
   .nav .row{display:flex;align-items:center;gap:clamp(.9rem,2.4vw,2rem);padding:.95rem 0}
   .logo{font-family:var(--display);font-weight:__WEIGHT__;letter-spacing:__TRACKING__;
         font-size:1.12rem;margin-right:auto;display:flex;align-items:baseline;gap:.12rem}
-  .logo i{width:7px;height:7px;border-radius:50%;background:var(--primary);display:inline-block;
-          transform:translateY(-.05em)}
   .nav a.lnk{text-decoration:none;color:var(--muted);font-size:.9rem}
   .nav a.lnk:hover{color:var(--ink)}
   @media(max-width:640px){.nav a.lnk{display:none}}
@@ -267,14 +268,12 @@ public final class PageWriter {
            font-size:.66rem;letter-spacing:.22em;text-transform:uppercase;color:var(--primary);
            border:1px solid color-mix(in srgb,var(--primary) 45%,transparent);
            border-radius:999px;padding:.34rem .8rem;margin-bottom:1.5rem}
-  .eyebrow i{width:5px;height:5px;border-radius:50%;background:var(--primary)}
   h1{font-family:var(--display);font-weight:__WEIGHT__;letter-spacing:__TRACKING__;
      font-size:clamp(2.5rem,7.2vw,5.2rem);line-height:.97;max-width:15ch;text-wrap:balance}
   .lede{font-size:clamp(1.06rem,1.7vw,1.36rem);color:var(--muted);margin-top:1.35rem;
         max-width:44ch;text-wrap:pretty}
   .actions{display:flex;align-items:center;gap:1.1rem;flex-wrap:wrap;margin-top:2.1rem}
   .btn.lg{font-size:1.02rem;padding:.92rem 1.7rem}
-  .fine{font-family:var(--mono);font-size:.72rem;color:var(--muted)}
 
   .band{padding:clamp(3rem,8vh,5.5rem) 0;border-top:1px solid var(--line)}
   .head{display:flex;align-items:baseline;gap:1rem;margin-bottom:2.4rem;flex-wrap:wrap}
@@ -292,10 +291,15 @@ public final class PageWriter {
   .feature h3{font-family:var(--display);font-size:1.16rem;font-weight:__WEIGHT__;
               letter-spacing:-.01em;margin-bottom:.25rem}
   .feature p{color:var(--muted);max-width:56ch}
+  /* deliberately not three equal columns: the first feature leads */
   @media(min-width:860px){
-    .features{display:grid;grid-template-columns:repeat(3,1fr);gap:0 2rem}
+    .features{display:grid;grid-template-columns:1.35fr 1fr;gap:2.4rem 3rem;align-items:start}
     .feature{border-top:0;padding:0;display:block}
     .feature .badge{margin-bottom:1rem}
+    .feature:first-child{grid-row:span 2;align-self:stretch;
+      border-right:1px solid var(--line);padding-right:3rem}
+    .feature:first-child h3{font-size:1.5rem}
+    .feature:first-child p{font-size:1.05rem}
   }
 
   .tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(238px,1fr));gap:1rem;align-items:start}
@@ -373,7 +377,7 @@ public final class PageWriter {
 
 <nav class="nav" id="nav">
   <div class="wrap row">
-    <span class="logo">__NAME__<i></i></span>
+    <span class="logo">__NAME__</span>
     <a class="lnk" href="#what">What it does</a>
     <a class="lnk" href="#pricing">Pricing</a>
     <a class="lnk" href="#questions">Questions</a>
@@ -385,19 +389,18 @@ public final class PageWriter {
   <div class="glow"></div>
   __ART__
   <div class="wrap">
-    <span class="eyebrow"><i></i>__BADGE__</span>
+    <span class="eyebrow">__BADGE__</span>
     <h1>__HEADLINE__</h1>
     <p class="lede">__SUBHEAD__</p>
     <div class="actions">
       <a class="btn lg" href="#get">__CTA__</a>
-      <span class="fine">No card. Runs on your own machine.</span>
     </div>
   </div>
 </header>
 
 <section class="band" id="what">
   <div class="wrap">
-    <div class="head"><h2>What it does</h2><span class="note">three things, no more</span></div>
+    <div class="head"><h2>What it does</h2></div>
     <div class="features">
       __FEATURES__
     </div>
@@ -406,7 +409,7 @@ public final class PageWriter {
 
 <section class="band" id="pricing">
   <div class="wrap">
-    <div class="head"><h2>Pricing</h2><span class="note">cancel whenever</span></div>
+    <div class="head"><h2>Pricing</h2></div>
     <div class="tiers">
       __TIERS__
     </div>
@@ -415,7 +418,7 @@ public final class PageWriter {
 
 <section class="band" id="questions">
   <div class="wrap">
-    <div class="head"><h2>Questions</h2><span class="note">asked before you asked</span></div>
+    <div class="head"><h2>Questions</h2></div>
     <div class="qs">
       __FAQ__
     </div>
@@ -436,7 +439,7 @@ public final class PageWriter {
 
     <div class="receipt rise">
       <div class="rh"><span>Built by <b>seven agents</b> on one laptop__SECS__</span>
-        <span style="margin-left:auto">no cloud, nothing left the room</span></div>
+        <span style="margin-left:auto">taste guard: <b>__GUARD__</b></span></div>
       <dl>
         __RECEIPT__
       </dl>

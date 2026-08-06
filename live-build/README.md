@@ -61,6 +61,38 @@ skeptic       the hard question      The biggest challenge? How do I ensure myâ€
 Six palettes each pick their own display face, so a serif palette does not look
 like the sans one with different colours.
 
+## The taste guard
+
+Lever four from the talk, made real. A deterministic guardrail sits between the
+agents and the projector, and nothing is served without passing it.
+
+It is deliberately **not** a model. Asking a model "does this page look good"
+gets you a yes every time. So the rules a designer would actually enforce are
+written down and checked mechanically in `TasteGuard.java`:
+
+| Rule | Why |
+|---|---|
+| no em-dashes anywhere visible | the most reliable tell that a machine wrote it |
+| eyebrow labels rationed to one per three sections | a label above every section is the templated rhythm |
+| no three identical feature cards | the layout every model reaches for |
+| no tiny tagline under the hero button | the hero carries one message |
+| no decorative status dots | a dot with no state is decoration pretending to be information |
+| no scroll cues, no version stamps | devtool fixtures, not page content |
+| calls to action under 34 characters | longer ones wrap to two lines and read as broken |
+| no elevate / seamless / unleash / next-gen | what a model writes when it has nothing to say |
+
+Rules that can be repaired safely are repaired rather than merely reported: an
+em-dash becomes a middle dot, an over-long call to action is cut back to its
+first clause. The rest are reported, and the page carries the verdict in its own
+build receipt (`taste guard: passed`).
+
+**It earns its place.** Run against the first page that got called finished, it
+failed five checks: an em-dash in the title, four eyebrow labels where two were
+allowed, three equal feature cards, a tagline under the hero button, and two
+decorative dots. Then it caught a 35-character call to action that would have
+wrapped at desktop, which no one had noticed by eye. That is the argument for
+guardrails in one example: the eye gets tired, the rule does not.
+
 ## Background builds and the closing gallery
 
 The queue is not idle. A scheduled job builds one waiting idea at a time, with no
