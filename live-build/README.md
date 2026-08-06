@@ -36,10 +36,30 @@ GET /page/{id}?download=1   keep it (braathat.html)
 GET /api/mine/{id}          the sender's phone polls this
 ```
 
-nav · hero with generated SVG artwork · three features · three pricing tiers ·
-an FAQ · an email capture · a footer crediting whoever sent the idea. No
-frameworks, no external requests, nothing to install. The phone that submitted
-shows a green **"Your page is ready"** button the moment it exists.
+A sticky blurred nav, a hero whose artwork bleeds off the edge behind the
+headline, three features with icons chosen from what the words actually say,
+three pricing tiers with the middle one lifted, an FAQ, an email capture, and a
+**build receipt**: a quiet monospace ledger naming which agent produced which
+part of the page, with the total build time. No frameworks, no external
+requests, nothing to install. The phone that submitted it shows a green
+**"Your page is ready"** button the moment it exists.
+
+The receipt is the point. This is not pretending to be an ordinary SaaS page;
+it is a product that did not exist ten seconds ago, so its provenance is part
+of the design rather than something to hide:
+
+```
+namer         the name               BraaiAlert
+copywriter    the words              Load-shedding alert: Light your braai just r
+designer      the palette            #7c9cff / #22d3ee
+illustrator   the artwork            waves
+pricer        three tiers            Free · R49 · R149
+reviewer      sharpened the button   Try now
+skeptic       the hard question      The biggest challenge? How do I ensure my…
+```
+
+Six palettes each pick their own display face, so a serif palette does not look
+like the sans one with different colours.
 
 ## Background builds and the closing gallery
 

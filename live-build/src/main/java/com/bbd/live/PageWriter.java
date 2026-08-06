@@ -2,16 +2,22 @@ package com.bbd.live;
 
 import com.bbd.live.Model.*;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Turns one crew Result into a real, standalone landing page: nav, hero,
- * features, pricing, FAQ, sign-up and footer, with every style inlined.
+ * Turns one crew Result into a real, standalone landing page.
  *
- * <p>One file, no frameworks, no external requests. The attendee can open it,
- * keep it, or mail it to themselves, which is the difference between showing
- * someone a mockup and handing them the thing.
+ * <p>Design note: this page is not pretending to be an ordinary SaaS site. Its
+ * subject is a product that did not exist ten seconds ago, invented by a crew of
+ * agents on a laptop in the room, so the provenance is part of the design rather
+ * than something to hide. That is what the build receipt near the bottom is for:
+ * proof of its own construction, in the crew's own words.
+ *
+ * <p>No frameworks, no external requests, no build step. One file the attendee
+ * can open, keep, or mail to themselves.
  */
 public final class PageWriter {
     private PageWriter() {}
@@ -21,42 +27,89 @@ public final class PageWriter {
         return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
     }
 
-    /** The Illustrator's artwork, drawn as SVG so no image files are needed. */
+    // ------------------------------------------------------------ icons
+    // Real line icons, chosen by what the feature actually says. A coloured
+    // square is a placeholder; an icon that matches the words is a decision.
+    private static final Map<String, String> ICONS = new LinkedHashMap<>();
+    static {
+        ICONS.put("bolt", "<path d=\"M13 2 4 14h7l-1 8 10-12h-7z\"/>");
+        ICONS.put("pin", "<path d=\"M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z\"/><circle cx=\"12\" cy=\"10\" r=\"2.6\"/>");
+        ICONS.put("shield", "<path d=\"M12 3l8 3v6c0 5-4 8-8 9-4-1-8-4-8-9V6z\"/><path d=\"M9 12l2 2 4-4\"/>");
+        ICONS.put("clock", "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 7v5l3.5 2\"/>");
+        ICONS.put("users", "<circle cx=\"9\" cy=\"8\" r=\"3.2\"/><path d=\"M2.5 20a6.5 6.5 0 0 1 13 0\"/><path d=\"M16 5.5a3.2 3.2 0 0 1 0 6M17.5 20a6.4 6.4 0 0 0-2.2-4.6\"/>");
+        ICONS.put("offline", "<path d=\"M2 8.8A16 16 0 0 1 22 8.8M5.5 12.4a11 11 0 0 1 13 0M9 16a6 6 0 0 1 6 0\"/><circle cx=\"12\" cy=\"20\" r=\"1.2\" fill=\"currentColor\" stroke=\"none\"/><path d=\"M3 3l18 18\"/>");
+        ICONS.put("tag", "<path d=\"M3 12.5V4a1 1 0 0 1 1-1h8.5L21 11.5 12.5 20z\"/><circle cx=\"7.5\" cy=\"7.5\" r=\"1.4\"/>");
+        ICONS.put("spark", "<path d=\"M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.4z\"/><path d=\"M18.5 16.5l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z\"/>");
+        ICONS.put("download", "<path d=\"M12 3v12\"/><path d=\"M7.5 10.5 12 15l4.5-4.5\"/><path d=\"M4 20h16\"/>");
+        ICONS.put("bell", "<path d=\"M18 8.5a6 6 0 1 0-12 0c0 6-2 7-2 7h16s-2-1-2-7z\"/><path d=\"M10.3 20a2 2 0 0 0 3.4 0\"/>");
+        ICONS.put("eye", "<path d=\"M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/>");
+        ICONS.put("check", "<path d=\"M20 6 9 17l-5-5\"/>");
+    }
+    private static final String[][] ICON_RULES = {
+        {"real[- ]?time|instant|now|immediate|live|alert|notif|warn", "bolt"},
+        {"privat|secure|safe|encrypt|your data|data stays|no hostage|belongs", "shield"},
+        {"location|area|nearby|map|local|route|gps|suburb|street address", "pin"},
+        {"plan|ahead|schedul|calendar|time|remind|ready", "clock"},
+        {"shar|family|team|street|togeth|group|everyone", "users"},
+        {"offline|no signal|without internet|works anywhere", "offline"},
+        {"free|price|cost|card|pay|cheap|budget", "tag"},
+        {"smart|clever|learn|habit|automatic|magic", "spark"},
+        {"export|download|keep|own|backup", "download"},
+        {"nagging|quiet|once|speak|tell you", "bell"},
+        {"watch|monitor|keep an eye|track|see", "eye"},
+    };
+    private static String iconFor(String text) {
+        String t = text == null ? "" : text.toLowerCase();
+        for (String[] rule : ICON_RULES)
+            if (java.util.regex.Pattern.compile(rule[0]).matcher(t).find()) return ICONS.get(rule[1]);
+        return ICONS.get("check");
+    }
+    private static String svgIcon(String text) {
+        return "<svg class=\"ic\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\""
+             + " stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\">" + iconFor(text) + "</svg>";
+    }
+    private static String tick() {
+        return "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\""
+             + " stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\">" + ICONS.get("check") + "</svg>";
+    }
+
+    // ------------------------------------------------------------ artwork
+    private static double rnd(int seed, int n) {
+        return ((long) seed * (n + 3) * 9301 + 49297) % 233280 / 233280.0;
+    }
+
+    /** The Illustrator's choice, drawn large and soft behind the hero. */
     private static String artSvg(Art a) {
         if (a == null) return "";
         List<String> cols = a.colors();
-        String c1 = cols != null && cols.size() > 0 ? cols.get(0) : "#F5A524";
+        String c1 = cols != null && !cols.isEmpty() ? cols.get(0) : "#F5A524";
         String c2 = cols != null && cols.size() > 1 ? cols.get(1) : "#38BDF8";
         int sd = a.seed();
         StringBuilder in = new StringBuilder();
         switch (a.kind() == null ? "blobs" : a.kind()) {
-            case "rings" -> { for (int i = 0; i < 5; i++)
-                in.append("<circle cx=\"").append(70 + i * 100).append("\" cy=\"70\" r=\"").append(22 + rnd(sd, i) * 34)
-                  .append("\" fill=\"none\" stroke=\"").append(i % 2 == 0 ? c1 : c2).append("\" stroke-width=\"6\" opacity=\".9\"/>"); }
-            case "waves" -> { for (int i = 0; i < 3; i++)
-                in.append("<path d=\"M0 ").append(42 + i * 26).append(" Q 130 ").append(10 + rnd(sd, i) * 70)
-                  .append(" 260 ").append(42 + i * 26).append(" T 540 ").append(42 + i * 26)
-                  .append("\" fill=\"none\" stroke=\"").append(i % 2 == 0 ? c1 : c2).append("\" stroke-width=\"6\" opacity=\".85\"/>"); }
-            case "grid" -> { for (int i = 0; i < 28; i++)
-                in.append("<rect x=\"").append((i % 14) * 38 + 8).append("\" y=\"").append((i / 14) * 66 + 8)
-                  .append("\" width=\"30\" height=\"52\" rx=\"7\" fill=\"").append(rnd(sd, i) > .5 ? c1 : c2)
-                  .append("\" opacity=\"").append(0.3 + rnd(sd, i) * 0.65).append("\"/>"); }
-            case "burst" -> { for (int i = 0; i < 18; i++)
-                in.append("<line x1=\"270\" y1=\"70\" x2=\"").append(270 + Math.cos(i / 18.0 * 6.28) * (80 + rnd(sd, i) * 170))
-                  .append("\" y2=\"").append(70 + Math.sin(i / 18.0 * 6.28) * (28 + rnd(sd, i) * 48))
-                  .append("\" stroke=\"").append(i % 2 == 0 ? c1 : c2).append("\" stroke-width=\"5\" opacity=\".8\"/>");
-                in.append("<circle cx=\"270\" cy=\"70\" r=\"18\" fill=\"").append(c1).append("\"/>"); }
-            default -> { for (int i = 0; i < 5; i++)
-                in.append("<ellipse cx=\"").append(65 + i * 110).append("\" cy=\"").append(70 + (rnd(sd, i) - .5) * 54)
-                  .append("\" rx=\"").append(40 + rnd(sd, i) * 38).append("\" ry=\"").append(27 + rnd(sd, i) * 24)
-                  .append("\" fill=\"").append(i % 2 == 0 ? c1 : c2).append("\" opacity=\".55\"/>"); }
+            case "rings" -> { for (int i = 0; i < 6; i++)
+                in.append("<circle cx=\"").append(90 + i * 120).append("\" cy=\"").append(300 + (rnd(sd, i) - .5) * 180)
+                  .append("\" r=\"").append(60 + rnd(sd, i) * 130).append("\" fill=\"none\" stroke=\"")
+                  .append(i % 2 == 0 ? c1 : c2).append("\" stroke-width=\"2\"/>"); }
+            case "waves" -> { for (int i = 0; i < 5; i++)
+                in.append("<path d=\"M-40 ").append(140 + i * 90).append(" Q 200 ").append(60 + rnd(sd, i) * 320)
+                  .append(" 440 ").append(180 + i * 80).append(" T 900 ").append(150 + i * 85)
+                  .append("\" fill=\"none\" stroke=\"").append(i % 2 == 0 ? c1 : c2).append("\" stroke-width=\"2.5\"/>"); }
+            case "grid" -> { for (int i = 0; i < 60; i++)
+                in.append("<rect x=\"").append((i % 10) * 86 + 20).append("\" y=\"").append((i / 10) * 96 + 20)
+                  .append("\" width=\"52\" height=\"62\" rx=\"12\" fill=\"").append(rnd(sd, i) > .5 ? c1 : c2)
+                  .append("\" opacity=\"").append(.06 + rnd(sd, i) * .3).append("\"/>"); }
+            case "burst" -> { for (int i = 0; i < 30; i++)
+                in.append("<line x1=\"430\" y1=\"300\" x2=\"").append(430 + Math.cos(i / 30.0 * 6.283) * (180 + rnd(sd, i) * 420))
+                  .append("\" y2=\"").append(300 + Math.sin(i / 30.0 * 6.283) * (150 + rnd(sd, i) * 330))
+                  .append("\" stroke=\"").append(i % 2 == 0 ? c1 : c2).append("\" stroke-width=\"2\"/>"); }
+            default -> { for (int i = 0; i < 9; i++)
+                in.append("<ellipse cx=\"").append(80 + i * 100).append("\" cy=\"").append(280 + (rnd(sd, i) - .5) * 260)
+                  .append("\" rx=\"").append(90 + rnd(sd, i) * 120).append("\" ry=\"").append(70 + rnd(sd, i) * 90)
+                  .append("\" fill=\"").append(i % 2 == 0 ? c1 : c2).append("\" opacity=\".22\"/>"); }
         }
-        return "<svg viewBox=\"0 0 540 140\" xmlns=\"http://www.w3.org/2000/svg\" role=\"img\" aria-label=\"abstract artwork\">"
+        return "<svg class=\"field\" viewBox=\"0 0 860 600\" preserveAspectRatio=\"xMidYMid slice\" aria-hidden=\"true\">"
                 + in + "</svg>";
-    }
-
-    private static double rnd(int seed, int n) {
-        return ((long) seed * (n + 3) * 9301 + 49297) % 233280 / 233280.0;
     }
 
     /** A filename-safe slug, used for the download. */
@@ -71,167 +124,351 @@ public final class PageWriter {
         Copy c = r.copy();
         Palette p = r.palette();
         String name = r.product() != null && r.product().name() != null ? r.product().name() : "This";
-        String who = idea.name == null || idea.name.isBlank() ? "someone in the room" : idea.name;
+        String who = idea.name == null || idea.name.isBlank() || !idea.showName ? "someone in the room" : idea.name;
         String cta = c.cta() == null ? "Get started" : c.cta();
+        List<Tier> tiers = r.pricing() == null ? List.of() : r.pricing();
+        String secs = idea.ms > 0 ? String.format("%.1fs", idea.ms / 1000.0) : "";
 
-        String feats = c.features() == null ? "" : c.features().stream()
-                .map(f -> "<div class=\"feat\"><div class=\"ic\"></div><h3>" + esc(f.title()) + "</h3><p>" + esc(f.body()) + "</p></div>")
+        // a serif palette gets a serif display; the rest get a tight, heavy sans
+        String bodyFont = p.font() == null ? "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif" : p.font();
+        boolean serif = bodyFont.toLowerCase().matches(".*(georgia|times|palatino|serif).*");
+        String display = bodyFont;
+        if (serif) bodyFont = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif";
+        String tracking = serif ? "-.012em" : "-.035em";
+        String weight = serif ? "600" : "800";
+
+        String feats = c.features() == null ? "" : c.features().stream().map(x ->
+                "<article class=\"feature rise\"><span class=\"badge\">" + svgIcon(x.title() + " " + x.body())
+              + "</span><div><h3>" + esc(x.title()) + "</h3><p>" + esc(x.body()) + "</p></div></article>")
                 .collect(Collectors.joining("\n      "));
 
-        String tiers = r.pricing() == null ? "" : r.pricing().stream().map(t ->
-                "<div class=\"tier" + (t.featured() ? " featured" : "") + "\">"
-              + "<div class=\"tag\">" + (t.featured() ? "most people pick this" : "") + "</div>"
+        String tierHtml = tiers.stream().map(t ->
+                "<article class=\"tier rise" + (t.featured() ? " pick" : "") + "\">"
+              + "<div class=\"tier-tag\">" + (t.featured() ? "most people pick this" : "") + "</div>"
               + "<h3>" + esc(t.name()) + "</h3>"
               + "<div class=\"price\">" + esc(t.price()) + "</div>"
               + "<div class=\"per\">" + esc(t.per()) + "</div>"
               + "<p class=\"blurb\">" + esc(t.blurb()) + "</p>"
-              + "<ul>" + (t.lines() == null ? "" : t.lines().stream().map(l -> "<li>" + esc(l) + "</li>").collect(Collectors.joining())) + "</ul>"
-              + "<a class=\"pick\" href=\"#get\">" + esc(cta) + "</a></div>")
+              + "<ul>" + (t.lines() == null ? "" : t.lines().stream()
+                    .map(l -> "<li>" + tick() + "<span>" + esc(l) + "</span></li>").collect(Collectors.joining())) + "</ul>"
+              + "<a class=\"pick-btn\" href=\"#get\">Choose " + esc(t.name()) + "</a></article>")
                 .collect(Collectors.joining("\n      "));
 
-        String faq = r.faq() == null ? "" : r.faq().stream()
-                .map(q -> "<details><summary>" + esc(q.q()) + "</summary><p>" + esc(q.a()) + "</p></details>")
+        String faqHtml = r.faq() == null ? "" : r.faq().stream()
+                .map(q -> "<details class=\"rise\"><summary>" + esc(q.q()) + "</summary><p>" + esc(q.a()) + "</p></details>")
                 .collect(Collectors.joining("\n      "));
 
-        return """
+        // the crew's own account of what it made
+        String[][] receipt = {
+            {"namer", "the name", name},
+            {"copywriter", "the words", cut(c.headline(), 44)},
+            {"designer", "the palette", p.primary() + " / " + p.accent()},
+            {"illustrator", "the artwork", r.art() == null ? "" : r.art().kind()},
+            {"pricer", "three tiers", tiers.stream().map(Tier::price).collect(Collectors.joining(" · "))},
+            {"reviewer", "sharpened the button", cta},
+            {"skeptic", "the hard question", cut(r.skeptic(), 52) + "…"},
+        };
+        StringBuilder rec = new StringBuilder();
+        for (String[] row : receipt) {
+            if (row[2] == null || row[2].isBlank()) continue;
+            rec.append("<dt>").append(esc(row[0])).append("</dt><span class=\"what\">").append(esc(row[1]))
+               .append("</span><dd>").append(esc(row[2])).append("</dd>\n        ");
+        }
+
+        return CSS_AND_BODY
+                .replace("__BG__", nz(p.bg(), "#0e1016"))
+                .replace("__SURFACE__", nz(p.surface(), "#171a22"))
+                .replace("__INK__", nz(p.ink(), "#ECE7DE"))
+                .replace("__MUTED__", nz(p.muted(), "#9aa0ae"))
+                .replace("__PRIMARY__", nz(p.primary(), "#F5A524"))
+                .replace("__ACCENT__", nz(p.accent(), "#38BDF8"))
+                .replace("__BODYFONT__", bodyFont)
+                .replace("__DISPLAY__", display)
+                .replace("__TRACKING__", tracking)
+                .replace("__WEIGHT__", weight)
+                .replace("__TITLE__", esc(name) + " &mdash; " + esc(c.headline()))
+                .replace("__DESC__", esc(c.subhead()))
+                .replace("__NAME__", esc(name))
+                .replace("__CTA__", esc(cta))
+                .replace("__BADGE__", esc(c.badge() == null ? "introducing" : c.badge()))
+                .replace("__HEADLINE__", esc(c.headline()))
+                .replace("__SUBHEAD__", esc(c.subhead()))
+                .replace("__ART__", artSvg(r.art()))
+                .replace("__FEATURES__", feats)
+                .replace("__TIERS__", tierHtml)
+                .replace("__FAQ__", faqHtml)
+                .replace("__RECEIPT__", rec.toString())
+                .replace("__SECS__", secs.isBlank() ? "" : ", in <b>" + secs + "</b>")
+                .replace("__WHO__", esc(who));
+    }
+
+    private static String nz(String v, String d) { return v == null || v.isBlank() ? d : v; }
+    private static String cut(String s, int n) {
+        if (s == null) return "";
+        return s.length() <= n ? s : s.substring(0, n);
+    }
+
+    // The page itself. Kept as one text block so it stays readable and so the
+    // Node mock and this server cannot drift apart by accident.
+    private static final String CSS_AND_BODY = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>%s &mdash; %s</title>
-<meta name="description" content="%s">
+<title>__TITLE__</title>
+<meta name="description" content="__DESC__">
 <style>
-  :root{--bg:%s;--surface:%s;--ink:%s;--muted:%s;--primary:%s;--accent:%s;--font:%s;}
+  :root{
+    --bg:__BG__; --surface:__SURFACE__; --ink:__INK__; --muted:__MUTED__;
+    --primary:__PRIMARY__; --accent:__ACCENT__;
+    --body:__BODYFONT__; --display:__DISPLAY__;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --line:color-mix(in srgb, var(--ink) 12%, transparent);
+    --lift:color-mix(in srgb, var(--ink) 4%, transparent);
+  }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--bg);color:var(--ink);font-family:var(--font);line-height:1.5;-webkit-font-smoothing:antialiased}
-  .wrap{max-width:1080px;margin:0 auto;padding:0 clamp(1.2rem,4vw,2.4rem)}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.55;
+       -webkit-font-smoothing:antialiased;overflow-x:hidden}
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:2;opacity:.035;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .wrap{width:min(1120px,100%);margin-inline:auto;padding-inline:clamp(1.15rem,4vw,2.6rem)}
   a{color:inherit}
-  nav{display:flex;align-items:center;gap:1.6rem;padding:1.4rem 0;flex-wrap:wrap}
-  nav .logo{font-weight:800;letter-spacing:-.02em;font-size:1.15rem;margin-right:auto}
-  nav .logo span{color:var(--primary)}
-  nav a{text-decoration:none;color:var(--muted);font-size:.94rem}
-  nav a:hover{color:var(--ink)}
-  nav .btn{background:var(--primary);color:#12100a;padding:.55rem 1.1rem;border-radius:9px;font-weight:700;font-size:.9rem}
-  .hero{padding:clamp(2rem,6vw,4.5rem) 0 clamp(1.5rem,4vw,3rem)}
-  .hero .art{margin-bottom:2rem}
-  .hero .art svg{width:100%%;max-height:140px;display:block}
-  .badge{display:inline-block;font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--primary);
-         border:1px solid var(--primary);border-radius:20px;padding:.3rem .85rem;margin-bottom:1.2rem}
-  h1{font-size:clamp(2.1rem,5.5vw,3.8rem);line-height:1.04;letter-spacing:-.025em;font-weight:800;max-width:18ch}
-  .sub{font-size:clamp(1.05rem,1.9vw,1.4rem);color:var(--muted);margin-top:1.1rem;max-width:46ch}
-  .cta{display:inline-block;margin-top:1.9rem;background:var(--primary);color:#12100a;font-weight:700;
-       padding:.95rem 1.9rem;border-radius:12px;font-size:1.08rem;text-decoration:none}
-  .note{font-size:.82rem;color:var(--muted);margin-top:.8rem}
-  section{padding:clamp(2rem,5vw,3.6rem) 0}
-  h2{font-size:clamp(1.5rem,3vw,2.2rem);letter-spacing:-.02em;font-weight:800;margin-bottom:1.6rem}
-  .feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1.1rem}
-  .feat{background:var(--surface);border-radius:14px;padding:1.5rem 1.4rem}
-  .feat .ic{width:38px;height:38px;border-radius:10px;background:var(--accent);opacity:.9;margin-bottom:.9rem}
-  .feat h3{font-size:1.18rem;font-weight:700;margin-bottom:.45rem}
-  .feat p{color:var(--muted);font-size:.97rem}
-  .tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.1rem}
-  .tier{background:var(--surface);border-radius:16px;padding:1.7rem 1.5rem;border:1px solid transparent;display:flex;flex-direction:column}
-  .tier.featured{border-color:var(--primary)}
-  .tier .tag{font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:var(--primary);margin-bottom:.5rem;min-height:1rem}
-  .tier h3{font-size:1.05rem;font-weight:700;color:var(--muted);margin-bottom:.5rem}
-  .tier .price{font-size:2.3rem;font-weight:800;letter-spacing:-.02em}
-  .tier .per{font-size:.85rem;color:var(--muted);margin-bottom:.9rem}
-  .tier .blurb{font-size:.92rem;color:var(--muted);margin-bottom:1.1rem}
-  .tier ul{list-style:none;display:flex;flex-direction:column;gap:.5rem;margin-bottom:1.4rem}
-  .tier li{font-size:.93rem;padding-left:1.4rem;position:relative}
-  .tier li::before{content:"";position:absolute;left:0;top:.45em;width:8px;height:8px;border-radius:2px;background:var(--accent)}
-  .tier .pick{margin-top:auto;display:block;text-align:center;text-decoration:none;padding:.75rem;border-radius:10px;
-              font-weight:700;font-size:.95rem;background:transparent;border:1px solid var(--primary);color:var(--primary)}
-  .tier.featured .pick{background:var(--primary);color:#12100a}
-  .faq{display:flex;flex-direction:column;gap:.7rem;max-width:760px}
-  details{background:var(--surface);border-radius:12px;padding:1.05rem 1.3rem}
-  summary{cursor:pointer;font-weight:700;font-size:1.02rem;list-style:none}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+
+  .nav{position:sticky;top:0;z-index:5;backdrop-filter:blur(14px);
+       background:color-mix(in srgb, var(--bg) 78%, transparent);border-bottom:1px solid transparent;
+       transition:border-color .3s}
+  .nav.stuck{border-bottom-color:var(--line)}
+  .nav .row{display:flex;align-items:center;gap:clamp(.9rem,2.4vw,2rem);padding:.95rem 0}
+  .logo{font-family:var(--display);font-weight:__WEIGHT__;letter-spacing:__TRACKING__;
+        font-size:1.12rem;margin-right:auto;display:flex;align-items:baseline;gap:.12rem}
+  .logo i{width:7px;height:7px;border-radius:50%;background:var(--primary);display:inline-block;
+          transform:translateY(-.05em)}
+  .nav a.lnk{text-decoration:none;color:var(--muted);font-size:.9rem}
+  .nav a.lnk:hover{color:var(--ink)}
+  @media(max-width:640px){.nav a.lnk{display:none}}
+  .btn{display:inline-block;text-decoration:none;font-weight:700;border-radius:999px;
+       background:var(--primary);color:var(--bg);padding:.6rem 1.15rem;font-size:.88rem;
+       transition:transform .18s cubic-bezier(.2,.7,.2,1),filter .18s}
+  .btn:hover{transform:translateY(-1px);filter:brightness(1.07)}
+
+  .hero{position:relative;padding:clamp(3.2rem,10vh,7rem) 0 clamp(2.6rem,7vh,5rem)}
+  .field{position:absolute;inset:-12% -22% auto auto;width:min(76vw,900px);height:min(72vh,640px);
+         opacity:.5;z-index:0;pointer-events:none;
+         mask-image:radial-gradient(70% 70% at 62% 42%,#000 30%,transparent 78%);
+         -webkit-mask-image:radial-gradient(70% 70% at 62% 42%,#000 30%,transparent 78%)}
+  .glow{position:absolute;top:-28%;right:-14%;width:62vw;height:62vw;max-width:820px;max-height:820px;
+        background:radial-gradient(circle,color-mix(in srgb,var(--primary) 26%,transparent) 0%,transparent 62%);
+        z-index:0;pointer-events:none}
+  .hero .wrap{position:relative;z-index:1}
+  .eyebrow{display:inline-flex;align-items:center;gap:.55rem;font-family:var(--mono);
+           font-size:.66rem;letter-spacing:.22em;text-transform:uppercase;color:var(--primary);
+           border:1px solid color-mix(in srgb,var(--primary) 45%,transparent);
+           border-radius:999px;padding:.34rem .8rem;margin-bottom:1.5rem}
+  .eyebrow i{width:5px;height:5px;border-radius:50%;background:var(--primary)}
+  h1{font-family:var(--display);font-weight:__WEIGHT__;letter-spacing:__TRACKING__;
+     font-size:clamp(2.5rem,7.2vw,5.2rem);line-height:.97;max-width:15ch;text-wrap:balance}
+  .lede{font-size:clamp(1.06rem,1.7vw,1.36rem);color:var(--muted);margin-top:1.35rem;
+        max-width:44ch;text-wrap:pretty}
+  .actions{display:flex;align-items:center;gap:1.1rem;flex-wrap:wrap;margin-top:2.1rem}
+  .btn.lg{font-size:1.02rem;padding:.92rem 1.7rem}
+  .fine{font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+
+  .band{padding:clamp(3rem,8vh,5.5rem) 0;border-top:1px solid var(--line)}
+  .head{display:flex;align-items:baseline;gap:1rem;margin-bottom:2.4rem;flex-wrap:wrap}
+  .head h2{font-family:var(--display);font-weight:__WEIGHT__;letter-spacing:__TRACKING__;
+           font-size:clamp(1.6rem,3.4vw,2.4rem);line-height:1.08}
+  .head .note{font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;
+              color:var(--muted);margin-left:auto}
+
+  .feature{display:grid;grid-template-columns:auto 1fr;gap:1.15rem;align-items:start;
+           padding:1.35rem 0;border-top:1px solid var(--line)}
+  .feature:first-child{border-top:0}
+  .feature .badge{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;
+                  background:var(--lift);border:1px solid var(--line);color:var(--accent);flex:none}
+  .feature .ic{width:21px;height:21px}
+  .feature h3{font-family:var(--display);font-size:1.16rem;font-weight:__WEIGHT__;
+              letter-spacing:-.01em;margin-bottom:.25rem}
+  .feature p{color:var(--muted);max-width:56ch}
+  @media(min-width:860px){
+    .features{display:grid;grid-template-columns:repeat(3,1fr);gap:0 2rem}
+    .feature{border-top:0;padding:0;display:block}
+    .feature .badge{margin-bottom:1rem}
+  }
+
+  .tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(238px,1fr));gap:1rem;align-items:start}
+  .tier{border:1px solid var(--line);border-radius:18px;padding:1.7rem 1.5rem;display:flex;
+        flex-direction:column;background:var(--lift);transition:transform .22s cubic-bezier(.2,.7,.2,1)}
+  .tier:hover{transform:translateY(-3px)}
+  .tier.pick{border-color:color-mix(in srgb,var(--primary) 60%,transparent);
+             background:color-mix(in srgb,var(--primary) 7%,var(--lift));
+             box-shadow:0 26px 60px -40px color-mix(in srgb,var(--primary) 70%,transparent)}
+  .tier .tier-tag{font-family:var(--mono);font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;
+                  color:var(--primary);min-height:1.1em;margin-bottom:.7rem}
+  .tier h3{font-size:.94rem;color:var(--muted);font-weight:600}
+  .price{font-family:var(--display);font-weight:__WEIGHT__;letter-spacing:__TRACKING__;
+         font-size:2.5rem;line-height:1.1;margin-top:.25rem}
+  .per{font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-bottom:1rem}
+  .tier .blurb{font-size:.93rem;color:var(--muted);margin-bottom:1.2rem}
+  .tier ul{list-style:none;display:grid;gap:.55rem;margin-bottom:1.5rem}
+  .tier li{font-size:.92rem;display:grid;grid-template-columns:auto 1fr;gap:.6rem;align-items:start}
+  .tier li svg{width:15px;height:15px;color:var(--accent);margin-top:.25em}
+  .tier .pick-btn{margin-top:auto;text-align:center;text-decoration:none;border-radius:999px;
+                  padding:.72rem;font-weight:700;font-size:.92rem;border:1px solid var(--primary);
+                  color:var(--primary);transition:background .2s,color .2s}
+  .tier .pick-btn:hover{background:var(--primary);color:var(--bg)}
+  .tier.pick .pick-btn{background:var(--primary);color:var(--bg)}
+
+  .qs{display:grid;gap:.6rem;max-width:64ch}
+  details{border:1px solid var(--line);border-radius:14px;background:var(--lift);overflow:hidden}
+  summary{cursor:pointer;list-style:none;padding:1.05rem 1.3rem;font-weight:650;font-size:1.01rem;
+          display:flex;align-items:center;gap:1rem}
   summary::-webkit-details-marker{display:none}
-  summary::after{content:"+";float:right;color:var(--primary);font-weight:800}
-  details[open] summary::after{content:"\\2212"}
-  details p{color:var(--muted);margin-top:.7rem;font-size:.97rem}
-  .signup{background:var(--surface);border-radius:18px;padding:clamp(1.6rem,4vw,2.6rem);text-align:center}
-  .signup h2{margin-bottom:.6rem}
-  .signup p{color:var(--muted);margin-bottom:1.4rem}
-  .signup form{display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap}
-  .signup input{padding:.85rem 1.1rem;border-radius:10px;border:1px solid var(--muted);background:var(--bg);
-                color:var(--ink);font-size:1rem;font-family:inherit;min-width:min(320px,100%%)}
-  .signup button{padding:.85rem 1.6rem;border-radius:10px;border:none;background:var(--primary);color:#12100a;
-                 font-weight:700;font-size:1rem;font-family:inherit;cursor:pointer}
-  .ok{color:var(--accent);margin-top:1rem;font-size:.95rem;min-height:1.3rem}
-  footer{border-top:1px solid var(--surface);margin-top:2rem;padding:2rem 0 3rem;color:var(--muted);font-size:.88rem;
+  summary::after{content:"";width:9px;height:9px;margin-left:auto;flex:none;
+                 border-right:2px solid var(--primary);border-bottom:2px solid var(--primary);
+                 transform:rotate(45deg) translateY(-2px);transition:transform .25s}
+  details[open] summary::after{transform:rotate(225deg) translateY(-2px)}
+  details p{padding:0 1.3rem 1.2rem;color:var(--muted);max-width:60ch}
+
+  .close-band{border:1px solid var(--line);border-radius:24px;padding:clamp(1.8rem,5vw,3.2rem);
+              background:linear-gradient(160deg,color-mix(in srgb,var(--primary) 11%,var(--lift)),var(--lift));
+              text-align:center}
+  .close-band h2{font-family:var(--display);font-weight:__WEIGHT__;letter-spacing:__TRACKING__;
+                 font-size:clamp(1.6rem,3.6vw,2.5rem);margin-bottom:.6rem}
+  .close-band p{color:var(--muted);margin-bottom:1.7rem}
+  form{display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap}
+  input[type=email]{flex:1 1 300px;max-width:360px;padding:.85rem 1.1rem;border-radius:999px;
+        border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;font-size:1rem}
+  input[type=email]::placeholder{color:var(--muted)}
+  button{border:0;cursor:pointer;font:inherit}
+  .said{margin-top:1.1rem;font-family:var(--mono);font-size:.82rem;color:var(--accent);min-height:1.3em}
+
+  .receipt{border-top:1px solid var(--line);margin-top:clamp(3rem,8vh,5rem);padding-top:1.6rem}
+  .receipt .rh{font-family:var(--mono);font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;
+               color:var(--muted);margin-bottom:1rem;display:flex;gap:.7rem;flex-wrap:wrap}
+  .receipt .rh b{color:var(--primary);font-weight:600}
+  .receipt dl{display:grid;grid-template-columns:auto auto 1fr;gap:.42rem 1rem;
+              font-family:var(--mono);font-size:.72rem;align-items:baseline}
+  .receipt dt{color:var(--primary)}
+  .receipt .what{color:var(--muted)}
+  .receipt dd{color:var(--ink);opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  @media(max-width:620px){.receipt dl{grid-template-columns:1fr;gap:.1rem}.receipt dd{margin-bottom:.6rem}}
+
+  footer{padding:2rem 0 3.4rem;color:var(--muted);font-size:.85rem;
          display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}
-  .made{font-size:.8rem;opacity:.85}
-  .made b{color:var(--ink)}
+  footer b{color:var(--ink);font-weight:600}
+
+  .rise{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s cubic-bezier(.2,.7,.2,1)}
+  .rise.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+    .rise{opacity:1;transform:none}
+    html{scroll-behavior:auto}
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <nav>
-    <div class="logo">%s<span>.</span></div>
-    <a href="#features">Features</a>
-    <a href="#pricing">Pricing</a>
-    <a href="#faq">FAQ</a>
-    <a class="btn" href="#get">%s</a>
-  </nav>
 
-  <header class="hero">
-    <div class="art">%s</div>
-    <span class="badge">%s</span>
-    <h1>%s</h1>
-    <p class="sub">%s</p>
-    <a class="cta" href="#get">%s</a>
-    <p class="note">No card. Runs on your own machine.</p>
-  </header>
+<nav class="nav" id="nav">
+  <div class="wrap row">
+    <span class="logo">__NAME__<i></i></span>
+    <a class="lnk" href="#what">What it does</a>
+    <a class="lnk" href="#pricing">Pricing</a>
+    <a class="lnk" href="#questions">Questions</a>
+    <a class="btn" href="#get">__CTA__</a>
+  </div>
+</nav>
 
-  <section id="features">
-    <h2>What it does</h2>
-    <div class="feats">
-      %s
+<header class="hero">
+  <div class="glow"></div>
+  __ART__
+  <div class="wrap">
+    <span class="eyebrow"><i></i>__BADGE__</span>
+    <h1>__HEADLINE__</h1>
+    <p class="lede">__SUBHEAD__</p>
+    <div class="actions">
+      <a class="btn lg" href="#get">__CTA__</a>
+      <span class="fine">No card. Runs on your own machine.</span>
     </div>
-  </section>
+  </div>
+</header>
 
-  <section id="pricing">
-    <h2>Pricing</h2>
+<section class="band" id="what">
+  <div class="wrap">
+    <div class="head"><h2>What it does</h2><span class="note">three things, no more</span></div>
+    <div class="features">
+      __FEATURES__
+    </div>
+  </div>
+</section>
+
+<section class="band" id="pricing">
+  <div class="wrap">
+    <div class="head"><h2>Pricing</h2><span class="note">cancel whenever</span></div>
     <div class="tiers">
-      %s
+      __TIERS__
     </div>
-  </section>
+  </div>
+</section>
 
-  <section id="faq">
-    <h2>Questions</h2>
-    <div class="faq">
-      %s
+<section class="band" id="questions">
+  <div class="wrap">
+    <div class="head"><h2>Questions</h2><span class="note">asked before you asked</span></div>
+    <div class="qs">
+      __FAQ__
     </div>
-  </section>
+  </div>
+</section>
 
-  <section id="get">
-    <div class="signup">
-      <h2>%s</h2>
+<section class="band" id="get">
+  <div class="wrap">
+    <div class="close-band rise">
+      <h2>__CTA__</h2>
       <p>Leave an address and we will tell you the moment it is ready.</p>
-      <form onsubmit="event.preventDefault();document.getElementById('ok').textContent='Thanks. Nothing was actually sent, this page is a demo.';">
-        <input type="email" required placeholder="you@example.com" aria-label="Your email">
-        <button type="submit">%s</button>
+      <form id="f">
+        <input type="email" required placeholder="you@example.com" aria-label="Your email address">
+        <button class="btn lg" type="submit">__CTA__</button>
       </form>
-      <div class="ok" id="ok"></div>
+      <p class="said" id="said" role="status"></p>
     </div>
-  </section>
 
-  <footer>
-    <span>&copy; %s. A page that did not exist a few minutes ago.</span>
-    <span class="made">idea by <b>%s</b> &middot; built by seven agents on one laptop</span>
-  </footer>
-</div>
+    <div class="receipt rise">
+      <div class="rh"><span>Built by <b>seven agents</b> on one laptop__SECS__</span>
+        <span style="margin-left:auto">no cloud, nothing left the room</span></div>
+      <dl>
+        __RECEIPT__
+      </dl>
+    </div>
+
+    <footer>
+      <span>&copy; __NAME__. A page that did not exist a few minutes ago.</span>
+      <span>idea by <b>__WHO__</b></span>
+    </footer>
+  </div>
+</section>
+
+<script>
+  const nav = document.getElementById("nav");
+  addEventListener("scroll", () => nav.classList.toggle("stuck", scrollY > 12), { passive: true });
+
+  const io = new IntersectionObserver((es, o) => es.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add("in"); o.unobserve(e.target); }
+  }), { rootMargin: "0px 0px -8% 0px" });
+  document.querySelectorAll(".rise").forEach((el, i) => {
+    el.style.transitionDelay = (i % 3) * 70 + "ms";
+    io.observe(el);
+  });
+
+  document.getElementById("f").addEventListener("submit", e => {
+    e.preventDefault();
+    document.getElementById("said").textContent =
+      "Thanks. Nothing was actually sent: this page is a demo built during a talk.";
+    e.target.reset();
+  });
+</script>
 </body>
 </html>
-""".formatted(
-                esc(name), esc(c.headline()), esc(c.subhead()),
-                p.bg(), p.surface(), p.ink(), p.muted(), p.primary(), p.accent(), p.font(),
-                esc(name), esc(cta),
-                artSvg(r.art()), esc(c.badge()), esc(c.headline()), esc(c.subhead()), esc(cta),
-                feats, tiers, faq,
-                esc(cta), esc(cta),
-                esc(name), esc(who));
-    }
+""";
 }
