@@ -15,3 +15,10 @@ _shots/
 .idea/
 *.iml
 .vscode/
+
+# Office lock files
+~$*
+
+# Local secrets (also ignored in live-build/.gitignore)
+.env.local
+**/.env.local

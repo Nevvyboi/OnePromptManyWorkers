@@ -40,6 +40,14 @@ public class ApiController {
         return ResponseEntity.ok(crew.hide(id));
     }
 
+    /** Presenter only: remove an idea for good, from the queue, gallery and disk. */
+    @PostMapping("/delete/{id}")
+    public ResponseEntity<Map<String, Object>> delete(@PathVariable String id,
+                                                      @RequestParam(required = false) String key) {
+        if (!crew.keyOk(key)) return ResponseEntity.status(403).body(Map.of("ok", false, "error", "presenter only"));
+        return ResponseEntity.ok(crew.delete(id));
+    }
+
     @PostMapping("/submit")
     public Map<String, Object> submit(@RequestBody SubmitReq req, HttpServletRequest http) {
         return crew.submit(req.text(), req.name(), Boolean.TRUE.equals(req.showName()), clientIp(http));
@@ -51,6 +59,14 @@ public class ApiController {
                                                     @RequestParam(defaultValue = "true") boolean open) {
         if (!crew.keyOk(key)) return ResponseEntity.status(403).body(Map.of("ok", false, "error", "presenter only"));
         return ResponseEntity.ok(crew.gate(open));
+    }
+
+    /** Presenter only: auto-advance the stage through the queue, one idea after another. */
+    @PostMapping("/auto")
+    public ResponseEntity<Map<String, Object>> auto(@RequestParam(required = false) String key,
+                                                    @RequestParam(defaultValue = "true") boolean on) {
+        if (!crew.keyOk(key)) return ResponseEntity.status(403).body(Map.of("ok", false, "error", "presenter only"));
+        return ResponseEntity.ok(crew.auto(on));
     }
 
     private static String clientIp(HttpServletRequest r) {

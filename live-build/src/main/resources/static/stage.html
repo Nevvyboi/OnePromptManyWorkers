@@ -1,167 +1,368 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Live Build — the stage</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Live Build — mission control</title>
 <style>
   :root{
-    --ink:#0B0D12; --ink2:#0E1119; --panel:#141824; --panel2:#10131c; --line:#242a3a;
-    --paper:#ECE7DE; --muted:#8A8FA0; --faint:#5a6072;
-    --amber:#F5A524; --teal:#2DD4BF; --violet:#8B5CF6; --rose:#FB7185; --sky:#38BDF8;
+    --bg:#08090B; --grid:#15181D; --panel:#0C0E11; --panel2:#0A0C0F;
+    --line:#1C2027; --line2:#12151A;
+    --ink:#E7EAF0; --dim:#8A909C; --faint:#565C67; --ghost:#2E333B;
+    --live:#35E0C8; --warn:#F5A524; --hot:#FB7185; --cool:#38BDF8;
     --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     --serif:"Iowan Old Style",Palatino,Georgia,serif;
     --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
   }
-  *{box-sizing:border-box;margin:0;padding:0}
-  html,body{height:100%;overflow:hidden}
-  body{background:radial-gradient(120% 90% at 20% -10%,#12151E 0%,var(--ink) 55%);color:var(--paper);font-family:var(--sans);display:flex;flex-direction:column;height:100vh}
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;overflow:hidden}
+  body{background:var(--bg);color:var(--ink);font-family:var(--mono);
+       display:flex;flex-direction:column;height:100vh;
+       background-image:linear-gradient(var(--line2) 1px,transparent 1px),
+                        linear-gradient(90deg,var(--line2) 1px,transparent 1px);
+       background-size:44px 44px;background-position:-1px -1px}
 
-  header{display:flex;align-items:center;gap:1.2rem;padding:1.3vh 2.2vw;border-bottom:1px solid var(--line);flex:none}
-  .live{display:inline-flex;align-items:center;gap:.6rem;font-family:var(--mono);font-size:.76rem;letter-spacing:.28em;text-transform:uppercase;color:var(--amber)}
-  .live .blip{width:11px;height:11px;border-radius:50%;background:var(--amber);animation:blip 1.5s infinite}
-  @keyframes blip{0%{box-shadow:0 0 0 0 rgba(245,165,36,.55)}70%{box-shadow:0 0 0 13px rgba(245,165,36,0)}100%{box-shadow:0 0 0 0 rgba(245,165,36,0)}}
-  header .ttl{flex:1;font-family:var(--mono);font-size:.68rem;letter-spacing:.2em;color:var(--faint);text-transform:uppercase}
+  /* ---------- top status rail ---------- */
+  .topbar{height:40px;flex:none;display:flex;align-items:center;gap:1.4rem;
+          padding:0 14px;border-bottom:1px solid var(--line);background:var(--panel2)}
+  .topbar .live{display:flex;align-items:center;gap:.5rem;font-weight:700;letter-spacing:.14em;
+                font-size:.72rem}
+  .topbar .live .rec{width:8px;height:8px;border-radius:50%;background:var(--live);
+                     box-shadow:0 0 8px var(--live);animation:rec 1.4s ease-in-out infinite}
+  @keyframes rec{0%,100%{opacity:1}50%{opacity:.3}}
+  .topbar .sub{font-size:.62rem;letter-spacing:.22em;color:var(--faint);text-transform:uppercase}
+  .topbar .spacer{flex:1}
+  .topbar .stat{font-size:.66rem;letter-spacing:.1em;color:var(--dim)}
+  .topbar .stat b{color:var(--live);font-weight:600}
+  .topbar .node{font-size:.66rem;letter-spacing:.16em;color:var(--faint);text-transform:uppercase}
+  @media(prefers-reduced-motion:reduce){.topbar .live .rec{animation:none}}
 
-  main{flex:1;display:grid;grid-template-columns:34% 1fr;gap:1.8vw;padding:1.8vh 2.2vw;min-height:0}
-  .left{display:flex;flex-direction:column;gap:1.1vh;min-height:0}
-  .h{font-family:var(--mono);font-size:.66rem;letter-spacing:.24em;text-transform:uppercase;color:var(--faint);flex:none}
+  /* ---------- the console grid ---------- */
+  /* The finished website is a surprise in the gallery, so the stage drops the live
+     output preview and gives the whole screen to the crew at work. */
+  main{flex:1 1 auto;min-height:0;display:grid;gap:1px;background:var(--line);padding:1px;
+       grid-template-columns:300px minmax(0,1fr);
+       grid-template-rows:minmax(0,1fr) 200px;
+       grid-template-areas:
+         "aside  web"
+         "line   line";}
+  .output{display:none !important}
+  @media(max-width:1180px){
+    main{grid-template-columns:260px minmax(0,1fr);
+         grid-template-rows:minmax(0,1fr) 176px;
+         grid-template-areas:"aside web" "line line";}
+  }
 
-  /* ---------- who sent it ---------- */
-  .who{flex:none;display:flex;gap:.9rem;align-items:flex-start;border:1px solid var(--line);border-radius:14px;padding:.9rem 1rem;background:linear-gradient(180deg,var(--panel),transparent 160%)}
-  .who .av{width:44px;height:44px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
-    font-family:var(--sans);font-weight:800;font-size:1.2rem;color:#0B0D12;background:var(--amber);
-    box-shadow:0 0 0 3px rgba(245,165,36,.18)}
-  .who .nm{font-weight:700;font-size:1.02rem;line-height:1.2}
-  .who .nm span{font-family:var(--mono);font-size:.64rem;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:.18rem;font-weight:400}
-  .who .idea{font-family:var(--serif);font-size:1.06rem;line-height:1.32;color:var(--paper);margin-top:.35rem}
-  .who.empty .av{background:var(--line);color:var(--faint)}
+  .panel{position:relative;background:var(--panel);min-height:0;min-width:0;display:flex;
+          flex-direction:column;overflow:hidden}
+  .panel::before{content:attr(data-label);position:absolute;top:7px;left:9px;z-index:3;
+                 font-size:.58rem;letter-spacing:.2em;color:var(--faint);text-transform:uppercase;
+                 pointer-events:none}
+  .panel::after{content:"";position:absolute;top:6px;right:8px;width:5px;height:5px;
+                border:1px solid var(--ghost);border-radius:1px}
+  .panel .body{flex:1 1 auto;min-height:0;overflow:hidden;padding:26px 12px 12px}
 
-  /* ---------- the web ---------- */
-  #web{width:100%;flex:1 1 auto;min-height:0}
-  .edge{fill:none;stroke:var(--line);stroke-width:1.6;transition:stroke .3s}
-  .edge.feedback{stroke-dasharray:5 6}
-  .edge.hot{stroke:var(--ec,var(--amber));filter:drop-shadow(0 0 6px var(--ec,var(--amber)))}
-  .node circle.body{fill:var(--panel);stroke:var(--nc);stroke-width:1.7;transition:fill .35s}
+  /* aside column: idea, telemetry, crew stacked */
+  .aside{grid-area:aside;background:var(--line);display:grid;gap:1px;
+         grid-template-rows:auto auto 1fr}
+  .aside > .panel{overflow:hidden}
+
+  /* ---------- idea panel ---------- */
+  .whobox{display:flex;gap:.7rem;align-items:flex-start}
+  .whobox .av{width:38px;height:38px;border-radius:2px;flex:none;display:flex;
+              align-items:center;justify-content:center;font-weight:700;font-size:1.05rem;
+              background:var(--warn);color:#0b0b0b;font-family:var(--sans)}
+  .whobox.empty .av{background:var(--ghost);color:var(--faint)}
+  .whobox .nm{font-size:.58rem;letter-spacing:.16em;color:var(--faint);text-transform:uppercase}
+  .whobox .nm span{display:block;color:var(--dim);font-size:.55rem;margin-bottom:.15rem}
+  .whobox .nm b{color:var(--ink);font-size:.82rem;font-weight:600;letter-spacing:0}
+  .idea-txt{margin-top:.8rem;font-family:var(--serif);font-size:1.02rem;line-height:1.3;
+            color:var(--ink)}
+
+  /* ---------- telemetry panel ---------- */
+  .tele{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line2)}
+  .tele .cell{background:var(--panel);padding:.5rem .6rem}
+  .tele .n{font-size:1.5rem;font-weight:700;line-height:1;color:var(--ink);
+           font-variant-numeric:tabular-nums}
+  .tele .n.live{color:var(--live)}
+  .tele .k{font-size:.54rem;letter-spacing:.14em;color:var(--faint);text-transform:uppercase;
+           margin-top:.25rem}
+
+  /* ---------- crew dot grid ---------- */
+  .dots{display:grid;grid-template-columns:1fr 1fr;gap:.28rem .5rem;align-content:start}
+  .cd{display:flex;align-items:center;gap:.42rem;font-size:.6rem;letter-spacing:.05em;
+      color:var(--faint);text-transform:uppercase;transition:color .2s}
+  .cd i{width:8px;height:8px;border-radius:50%;background:var(--ghost);flex:none;
+        box-shadow:none;transition:background .2s,box-shadow .2s}
+  .cd.on{color:var(--ink)} .cd.on i{background:var(--cc);box-shadow:0 0 7px var(--cc)}
+  .cd.assist{color:var(--warn)} .cd.assist i{background:var(--warn);box-shadow:0 0 7px var(--warn);
+        animation:cdp 1s ease-in-out infinite}
+  .cd.done{color:var(--dim)} .cd.done i{background:var(--cc);box-shadow:none}
+  @keyframes cdp{0%,100%{opacity:1}50%{opacity:.4}}
+  @media(prefers-reduced-motion:reduce){.cd.assist i{animation:none}}
+
+  /* ---------- web graph ---------- */
+  #web{width:100%;height:100%;display:block}
+  .node .lab{fill:var(--ink);font-size:11px;font-weight:600;letter-spacing:0;font-family:var(--mono)}
+  .node circle.body{fill:var(--panel);stroke:var(--nc);stroke-width:1.6;transition:fill .35s}
   .node.done circle.body,.node.assisting circle.body{fill:var(--nc)}
-  .node .ring{fill:none;stroke:var(--nc);stroke-width:2.2;stroke-dasharray:38 90;opacity:0;transform-box:fill-box;transform-origin:center}
+  .node .ring{fill:none;stroke:var(--nc);stroke-width:2.2;stroke-dasharray:34 90;opacity:0;
+        transform-box:fill-box;transform-origin:center}
   .node.working .ring,.node.assisting .ring{opacity:1;animation:spin 1s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
-  .node text{font-family:var(--mono);text-anchor:middle}
-  .node .lab{fill:var(--paper);font-size:12px;letter-spacing:.05em}
-  .node.done .lab,.node.assisting .lab{fill:#0B0D12;font-weight:700}
-  .node.idle{opacity:.5}
-  .tok text{font-family:var(--mono)}
+  @media(prefers-reduced-motion:reduce){.node.working .ring,.node.assisting .ring{animation:none;opacity:.5}}
+  .node.idle{opacity:.55}
+  .edge{fill:none;stroke:var(--line);stroke-width:1.4;transition:stroke .3s}
+  .edge.feedback{stroke-dasharray:5 6;stroke:var(--hot);opacity:.5}
+  .edge.hot{stroke:var(--ec,var(--live));filter:drop-shadow(0 0 5px var(--ec,var(--live)))}
 
-  /* ---------- the crew roster ---------- */
-  .crew{flex:none;display:flex;flex-direction:column;gap:.42rem}
-  .ag{display:grid;grid-template-columns:auto 1fr auto;gap:.7rem;align-items:center;
-      border:1px solid var(--line);border-left:3px solid var(--ac);border-radius:10px;
-      padding:.5rem .75rem;background:var(--panel2);opacity:.55;transition:opacity .3s,background .3s}
-  .ag.on{opacity:1;background:var(--panel)}
-  .ag .dot{width:10px;height:10px;border-radius:50%;background:var(--ac)}
-  .ag .nm{display:block;font-family:var(--mono);font-size:.86rem;color:var(--paper);line-height:1.35}
-  .ag .job{display:block;font-size:.76rem;color:var(--muted);line-height:1.25}
-  .ag .stwrap{text-align:right;white-space:nowrap}
-  .ag .ms{font-family:var(--mono);font-size:.6rem;color:var(--ac);opacity:.9;display:block;margin-top:.12rem}
-  .ag .st{font-family:var(--mono);font-size:.62rem;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);white-space:nowrap;text-align:right}
-  .ag.working .st,.ag.assisting .st{color:var(--ac)}
-  .ag.done .st{color:var(--ac)}
-  .ag .help{display:block;font-family:var(--mono);font-size:.63rem;color:var(--ac);margin-top:.15rem}
+  /* ---------- thought feed ---------- */
 
-  /* thinking: three dots breathing, plus what it is currently doing */
-  .ag .think{display:none;align-items:center;gap:.3rem;margin-top:.25rem}
-  .ag.working .think,.ag.assisting .think{display:flex}
-  .ag .think i{width:5px;height:5px;border-radius:50%;background:var(--ac);opacity:.35;
-               animation:blink 1.1s infinite}
-  .ag .think i:nth-child(2){animation-delay:.16s}
-  .ag .think i:nth-child(3){animation-delay:.32s}
-  @keyframes blink{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-2px)}}
-  .ag .think em{font-style:normal;font-family:var(--mono);font-size:.62rem;color:var(--ac);opacity:.85;margin-left:.2rem}
+  /* the feed lives under the web graph in the center column via a split panel */
+  .center{grid-area:web;background:var(--line);display:grid;gap:1px;grid-template-rows:1fr 1fr;min-height:0}
+  .center > .panel{min-height:0}
+  .feed{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:1px;
+        scrollbar-width:none}
+  .feed::-webkit-scrollbar{display:none}
+  .ev{display:grid;grid-template-columns:auto 1fr;gap:.5rem;align-items:start;
+      padding:.5rem .6rem;background:var(--panel2);border-left:2px solid var(--evc,var(--ghost));
+      animation:evin .3s ease}
+  @keyframes evin{from{opacity:0;transform:translateX(-4px)}to{opacity:1;transform:none}}
+  @media(prefers-reduced-motion:reduce){.ev{animation:none}}
+  .ev .dot{width:6px;height:6px;border-radius:50%;margin-top:.42rem;background:var(--evc,var(--faint))}
+  .ev .src{font-size:.56rem;letter-spacing:.12em;text-transform:uppercase;color:var(--evc,var(--dim))}
+  .ev .said{font-size:.76rem;color:var(--ink);line-height:1.4;margin-top:.12rem;font-family:var(--sans)}
+  .ev .said b{color:var(--evc,var(--ink));font-weight:600}
+  .ev.think .said{color:var(--dim);font-style:italic}
+  .ev .at{font-size:.52rem;color:var(--faint);margin-top:.2rem}
 
-  /* what the agent actually handed over, shown the moment it is done */
-  .ag .made{display:none;margin-top:.3rem;font-size:.74rem;line-height:1.35;color:var(--paper);
-            border-left:2px solid var(--ac);padding-left:.55rem;animation:madein .45s ease both}
-  .ag.done .made:not(:empty){display:block}
-  @keyframes madein{from{opacity:0;transform:translateX(-4px)}to{opacity:1;transform:none}}
-  .ag .made .sw{display:inline-flex;gap:.25rem;vertical-align:-2px;margin-right:.35rem}
-  .ag .made .sw b{width:12px;height:12px;border-radius:3px;display:inline-block}
+  .feedhead{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+  .runsbar{display:flex;gap:.3rem;flex-wrap:wrap}
+  .runsbar:empty{display:none}
+  .runchip{font-size:.58rem;letter-spacing:.05em;cursor:pointer;padding:.18rem .5rem;
+           border:1px solid var(--line);background:var(--panel);color:var(--dim);
+           transition:color .2s,border-color .2s}
+  .runchip:hover{color:var(--ink)}
+  .runchip.on{border-color:var(--live);color:var(--live)}
+  .runchip.live::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;
+           background:var(--live);margin-right:.35rem;animation:rec 1.3s ease-in-out infinite}
+  .replaynote{font-size:.56rem;letter-spacing:.08em;color:var(--warn);padding:.3rem .6rem;
+           background:var(--panel2)}
 
-  /* ---------- the build frame ---------- */
-  .build{min-height:0;display:flex;flex-direction:column}
-  .frame{flex:1;border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;background:#fff;box-shadow:0 40px 90px -50px #000;min-height:0}
-  .chrome{flex:none;display:flex;align-items:center;gap:.5rem;padding:.55rem .9rem;background:#0d1017;border-bottom:1px solid var(--line)}
-  .chrome .dot{width:11px;height:11px;border-radius:50%}
-  .chrome .url{margin-left:.6rem;font-family:var(--mono);font-size:.72rem;color:var(--faint);background:#161a24;padding:.3rem .8rem;border-radius:7px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .viewport{flex:1;overflow:auto;position:relative}
+  /* ---------- output preview ---------- */
+  .output{grid-area:output}
+  .frame{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;border:1px solid var(--line);
+         margin:26px 10px 10px;background:#fff;overflow:hidden}
+  .chrome{height:30px;flex:none;display:flex;align-items:center;gap:8px;padding:0 10px;
+          background:var(--panel2);border-bottom:1px solid var(--line)}
+  .chrome .dot{width:9px;height:9px;border-radius:50%}
+  .chrome .url{flex:1;font-size:.66rem;color:var(--dim);background:var(--bg);border-radius:2px;
+               padding:.28rem .6rem;margin-left:6px;overflow:hidden;white-space:nowrap;
+               text-overflow:ellipsis;font-family:var(--mono)}
+  .viewport{flex:1 1 auto;min-height:0;overflow:hidden;position:relative}
+  #pg{position:absolute;inset:0;overflow-y:auto;background:#fff}
+  .waiting{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+           gap:1.1rem;text-align:center;background:var(--panel)}
+  .waiting .pulse{width:54px;height:54px;border-radius:50%;background:var(--warn);opacity:.85;
+                  animation:wp 1.8s ease-in-out infinite}
+  @keyframes wp{0%,100%{transform:scale(1);opacity:.85}50%{transform:scale(1.12);opacity:.4}}
+  @media(prefers-reduced-motion:reduce){.waiting .pulse{animation:none}}
+  .waiting h3{font-family:var(--serif);font-size:1.4rem;color:var(--ink);margin:0}
+  .waiting p{font-size:.72rem;color:var(--dim);max-width:24ch}
+  /* the JS renders a light preview inside #pg; give it a neutral base */
+  #pg .sec{padding:1.4rem 1.6rem;font-family:var(--sans)}
+  #pg .pname{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:#666}
+  #pg .badge{display:inline-block;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;
+             border:1px solid #ccc;border-radius:99px;padding:.15rem .55rem;color:#888;margin:.5rem 0}
+  #pg h1{font-size:2rem;line-height:1.05;letter-spacing:-.02em;color:#111;margin:.4rem 0}
+  #pg .subh{color:#555;margin-top:.6rem;max-width:46ch}
+  #pg .cta{display:inline-block;margin-top:1rem;background:#111;color:#fff;border-radius:99px;
+           padding:.5rem 1rem;font-size:.8rem;font-weight:600}
+  #pg .rev-tag{display:none;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:#b45}
+  #pg .rev-tag.show{display:inline-block}
 
-  .pg{--pg-bg:#0e1016;--pg-surface:#171a22;--pg-ink:#ECE7DE;--pg-muted:#9aa0ae;--pg-primary:#F5A524;--pg-accent:#38BDF8;--pg-font:var(--sans);
-      min-height:100%;background:var(--pg-bg);color:var(--pg-ink);font-family:var(--pg-font);
-      transition:background .8s ease,color .8s ease;padding:clamp(1.4rem,3vw,3rem)}
-  .waiting{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.4rem;text-align:center}
-  .waiting .pulse{width:70px;height:70px;border-radius:50%;background:var(--amber);opacity:.85;animation:pulse 1.8s ease-in-out infinite}
-  @keyframes pulse{0%,100%{transform:scale(.85);opacity:.5}50%{transform:scale(1.1);opacity:.95}}
-  .waiting h3{font-family:var(--serif);font-size:1.8rem;color:#2a2e38}
-  .waiting p{font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;color:#242833}
+  /* ---------- assembly line ---------- */
+  .line{grid-area:line}
+  .linehead{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;padding:24px 12px 0}
+  .linehead .lbl{font-size:.6rem;letter-spacing:.16em;color:var(--faint);text-transform:uppercase;flex:none}
+  .flowkey{font-size:.56rem;color:var(--faint);display:flex;align-items:center;gap:.3rem}
+  .flowkey i{width:14px;height:0;border-top:2px solid;display:inline-block;margin:0 .1rem 0 .5rem}
+  .flowkey .kf{border-color:var(--live)} .flowkey .kb{border-color:var(--hot);border-top-style:dashed}
+  .flowkey .kh{border:0;width:8px;height:8px;border-radius:50%;background:var(--warn);margin-left:.5rem}
+  .flowstat{font-size:.66rem;color:var(--dim);margin-left:auto;flex:none;letter-spacing:.04em}
+  .flowstat b{color:var(--live);font-weight:600}
+  .nowbar{display:flex;gap:.35rem;flex-wrap:wrap;align-items:center;overflow:hidden;max-height:1.3rem}
+  .chip{display:inline-flex;align-items:center;gap:.35rem;padding:.16rem .5rem;
+        border:1px solid var(--nc,var(--line));background:var(--panel);
+        font-size:.56rem;letter-spacing:.06em;text-transform:uppercase;color:var(--nc,var(--dim))}
+  .chip i{width:5px;height:5px;border-radius:50%;background:var(--nc,var(--dim));
+          animation:cdp 1.1s ease-in-out infinite}
+  .chip.assist{--nc:var(--warn)}
+  .chip .note{color:var(--dim);text-transform:none;letter-spacing:.02em;font-size:.55rem;
+        max-width:11rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  @media(prefers-reduced-motion:reduce){.chip i{animation:none}}
+  .nowbar .idlebar{font-size:.58rem;color:var(--faint);letter-spacing:.06em}
+  .flowsvg{width:100%;flex:1 1 auto;min-height:0;display:block;overflow:visible;padding:2px 12px 8px}
+  .st-lab{font-size:8.5px;letter-spacing:.02em;fill:var(--dim);text-anchor:middle;font-family:var(--mono)}
+  .st-lab.on{fill:var(--ink)}
+  .st-made{font-size:8px;fill:var(--faint);text-anchor:middle;font-family:var(--mono)}
+  .st-ring{fill:var(--panel);stroke-width:2}
+  .st-ring.working,.st-ring.assisting{animation:cdp 1.1s ease-in-out infinite}
+  .st-ring.assisting{stroke-dasharray:3 3}
+  @media(prefers-reduced-motion:reduce){.st-ring.working,.st-ring.assisting{animation:none}}
+  .helped-badge{font-size:8px;fill:var(--warn);font-family:var(--mono)}
+  .rail{stroke:var(--line);stroke-width:1}
+  .flowarc{fill:none;stroke-linecap:round}
+  .flowarc.fwd{stroke:var(--live)} .flowarc.back{stroke:var(--hot);stroke-dasharray:4 4}
+  .baton{fill:#fff}
 
-  .sec{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
-  .sec.in{opacity:1;transform:none}
-  .hero h1{font-weight:800;font-size:clamp(2rem,4.4vw,3.4rem);line-height:1.05;letter-spacing:-.02em;max-width:20ch;border-radius:8px}
-  .hero h1.flash,.hero .cta.flash{animation:flash 1.6s ease}
-  .pname{font-family:var(--mono);font-size:.8rem;letter-spacing:.22em;text-transform:uppercase;color:var(--pg-accent);margin-bottom:.5rem}
-  @keyframes flash{0%{background:rgba(245,165,36,0)}18%{background:rgba(245,165,36,.45)}100%{background:transparent}}
-  .rev-tag{display:inline-block;font-family:var(--mono);font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:var(--pg-primary);border:1px dashed var(--pg-primary);border-radius:16px;padding:.22rem .7rem;margin-top:.7rem;opacity:0;transition:opacity .5s}
-  .rev-tag.show{opacity:1}
-  .hero .subh{font-size:clamp(1rem,1.6vw,1.35rem);color:var(--pg-muted);margin-top:1rem;max-width:44ch;line-height:1.5}
-  .hero .cta{display:inline-block;margin-top:1.5rem;background:var(--pg-primary);color:#12100a;font-weight:700;padding:.8rem 1.5rem;border-radius:11px;font-size:1.02rem}
-  .badge{display:inline-block;font-family:var(--mono);font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--pg-primary);border:1px solid var(--pg-primary);border-radius:20px;padding:.3rem .8rem;margin-bottom:1.1rem}
-  .feats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:2.2rem}
-  @media(max-width:1100px){.feats{grid-template-columns:1fr}}
-  .feat{background:var(--pg-surface);border-radius:13px;padding:1.2rem 1.1rem}
-  .feat .fi{width:32px;height:32px;border-radius:9px;background:var(--pg-accent);opacity:.9;margin-bottom:.7rem}
-  .feat h4{font-size:1.1rem;font-weight:700;margin-bottom:.35rem}
-  .feat p{font-size:.9rem;color:var(--pg-muted);line-height:1.5}
-  .skeptic{margin-top:1.8rem;border-left:3px solid var(--rose);background:rgba(251,113,133,.08);padding:.85rem 1.15rem;border-radius:0 10px 10px 0;font-size:.94rem;color:var(--pg-muted)}
-  .skeptic b{color:var(--rose);font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;display:block;margin-bottom:.3rem}
+  /* ---------- bottom status rail ---------- */
+  .botbar{height:26px;flex:none;display:flex;align-items:center;gap:1.2rem;padding:0 14px;
+          border-top:1px solid var(--line);background:var(--panel2);font-size:.62rem;
+          letter-spacing:.06em;color:var(--faint)}
+  .botbar b{color:var(--dim);font-weight:600}
+  .botbar .spacer{flex:1}
+  .botbar .qr{color:var(--dim)}
+  .botbar .qr b{color:var(--live)}
 
-  footer{flex:none;display:flex;align-items:center;justify-content:space-between;padding:1vh 2.2vw;border-top:1px solid var(--line);font-family:var(--mono);font-size:.72rem;color:var(--faint);letter-spacing:.1em}
-  footer .join{color:var(--muted)} footer .join b{color:var(--amber)}
-  .tally b{color:var(--paper)}
+  /* ---------- top-bar controls ---------- */
+  .topbar .tbtn{display:inline-flex;align-items:center;gap:.4rem;height:24px;padding:0 .7rem;
+        border:1px solid var(--line);background:var(--panel);color:var(--dim);cursor:pointer;
+        font-family:var(--mono);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase}
+  .topbar .tbtn:hover{color:var(--ink);border-color:var(--dim)}
+  .topbar .tbtn.on{border-color:var(--live);color:var(--live)}
+  .topbar .tbtn .b{color:var(--live);font-weight:600}
+
+  /* ---------- queue drawer ---------- */
+  .drawer{position:fixed;top:40px;bottom:0;right:0;width:330px;max-width:88vw;z-index:1200;
+        background:var(--panel2);border-left:1px solid var(--line);display:flex;flex-direction:column;
+        transform:translateX(103%);transition:transform .28s cubic-bezier(.4,0,.2,1);
+        box-shadow:-20px 0 46px rgba(0,0,0,.45)}
+  .drawer.open{transform:none}
+  .drawer h2{font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);
+        margin:0;padding:.9rem 1rem .5rem}
+  .drawer .autorow{margin:.1rem 1rem .5rem;padding:.55rem .7rem;border:1px solid var(--line);
+        display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+  .drawer .autorow.click{cursor:pointer} .drawer .autorow.click:hover{border-color:var(--dim)}
+  .drawer .autorow .lab{font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+  .drawer .autorow .val{font-size:.6rem;color:var(--faint);letter-spacing:.06em}
+  .drawer .autorow.on{border-color:var(--live)} .drawer .autorow.on .lab,.drawer .autorow.on .val{color:var(--live)}
+  .drawer .nxt{font-size:.62rem;color:var(--warn);padding:0 1rem .5rem;min-height:1rem;
+        overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .qbody{flex:1 1 auto;min-height:0;overflow-y:auto;padding:0 .8rem 1rem;scrollbar-width:none}
+  .qbody::-webkit-scrollbar{display:none}
+  .qgrp{margin-top:.5rem}
+  .qgrp .gh{font-size:.52rem;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);
+        display:flex;align-items:center;gap:.4rem;padding:.35rem .2rem;border-bottom:1px solid var(--line2)}
+  .qgrp .gh b{color:var(--dim);font-weight:600}
+  .qi{display:flex;gap:.55rem;align-items:flex-start;padding:.45rem .2rem;border-bottom:1px solid var(--line2)}
+  .qi .qd{width:6px;height:6px;border-radius:50%;margin-top:.42rem;flex:none;background:var(--faint)}
+  .qi .qt{font-size:.72rem;color:var(--ink);line-height:1.35;font-family:var(--sans)}
+  .qi .qm{font-size:.53rem;color:var(--faint);margin-top:.16rem;letter-spacing:.04em}
+  .qi.active{background:rgba(53,224,200,.07)}
+  .qi.active .qd{background:var(--live);box-shadow:0 0 7px var(--live);animation:cdp 1.1s ease-in-out infinite}
+  .qi.next{background:rgba(245,165,36,.06)}
+  .qi.next .qd{background:var(--warn);box-shadow:0 0 6px var(--warn)}
+  .qi.done .qd{background:var(--dim)} .qi.done .qt{color:var(--dim)}
+  .qi.waiting .qd{background:var(--ghost)}
+  .qempty{font-size:.58rem;color:var(--faint);padding:.5rem .2rem}
+  .drawer .xclose{position:absolute;top:.7rem;right:.8rem;cursor:pointer;color:var(--faint);
+        font-size:.9rem;background:none;border:none;line-height:1}
+  .drawer .xclose:hover{color:var(--ink)}
+  @media(prefers-reduced-motion:reduce){.qi.active .qd{animation:none}}
+
+  /* ---------- panel full-screen ---------- */
+  .panel .expand{position:absolute;top:4px;right:18px;z-index:4;width:18px;height:18px;padding:0;
+        border:none;background:none;color:var(--ghost);cursor:pointer;font-size:.72rem;line-height:1}
+  .panel:hover .expand{color:var(--faint)} .panel .expand:hover{color:var(--ink)}
+  .panel.full{position:fixed;inset:40px 0 26px 0;z-index:1100;background:var(--panel);
+        box-shadow:0 0 0 100vmax rgba(4,5,7,.74)}
+  .panel.full .body{padding:44px 26px 26px}
+  .panel.full .expand{color:var(--live);font-size:.82rem}
+  .panel.full .feed .said{font-size:.98rem} .panel.full .feed .src{font-size:.66rem}
+  .panel.full .feed .ev{padding:.7rem .9rem}
+
+  /* combined full-screen: the agents (the web) and the agents talking (the feed) as one */
+  .center.full{position:fixed;inset:40px 0 26px 0;z-index:1100;background:var(--line);
+        grid-template-rows:minmax(0,1fr);grid-template-columns:minmax(0,1.06fr) minmax(0,.94fr);
+        box-shadow:0 0 0 100vmax rgba(4,5,7,.74)}
+  .center.full > .panel{min-height:0;min-width:0}
+  .center.full .body{padding:44px 22px 22px}
+  .center.full .feed .said{font-size:1.02rem;line-height:1.45} .center.full .feed .src{font-size:.68rem}
+  .center.full .feed .ev{padding:.75rem 1rem}
+  .center.full .node .lab{font-size:12.5px}
+  .center.full .expand{color:var(--live);font-size:.82rem}
+  @media(max-width:900px){.center.full{grid-template-columns:minmax(0,1fr);grid-template-rows:1fr 1fr}}
 </style>
 </head>
 <body>
-  <header>
-    <span class="live"><span class="blip"></span> Live Build</span>
-    <span class="ttl">one prompt · many workers · every token on this laptop</span>
-    <span class="live" id="runTotal" style="color:var(--teal)"></span>
-    <span class="live" id="modeTop" style="color:var(--muted)"></span>
+  <header class="topbar">
+    <span class="live"><span class="rec"></span>LIVE BUILD</span>
+    <span class="sub">one prompt · many workers · every token on this laptop</span>
+    <span class="spacer"></span>
+    <span class="stat" id="runTotal"></span>
+    <span class="node" id="modeTop"></span>
+    <button class="tbtn" id="drawerBtn" title="show the queue">☰ queue <span class="b" id="drawerCount"></span></button>
   </header>
 
+  <aside class="drawer" id="drawer" aria-label="queue and builds">
+    <button class="xclose" id="drawerClose" title="close">&#10005;</button>
+    <h2>Queue &amp; builds</h2>
+    <div class="autorow" id="autoRow"><span class="lab">Auto-advance</span><span class="val" id="autoVal">off</span></div>
+    <div class="nxt" id="drawerNext"></div>
+    <div class="qbody" id="qbody"><div class="qempty">No ideas yet.</div></div>
+  </aside>
+
   <main>
-    <section class="left">
-      <div class="h">whose idea this is</div>
-      <div class="who empty" id="who">
-        <div class="av" id="avatar">?</div>
-        <div>
-          <div class="nm"><span>waiting</span>nobody yet</div>
-          <div class="idea" id="whoIdea">scan the code and send the crew an idea</div>
+    <div class="aside">
+      <section class="panel idea" data-label="01 · idea">
+        <div class="body">
+          <div class="whobox empty" id="who">
+            <div class="av" id="avatar">?</div>
+            <div class="nm"><span>waiting</span><b>nobody yet</b></div>
+          </div>
+          <div class="idea-txt" id="whoIdea">scan the code and send the crew an idea</div>
         </div>
-      </div>
+      </section>
 
-      <div class="h">the web · agents helping agents</div>
-      <svg id="web" viewBox="0 0 400 300" aria-hidden="true"></svg>
+      <section class="panel tele-panel" data-label="02 · telemetry">
+        <div class="body">
+          <div class="tele">
+            <div class="cell"><div class="n live" id="tm-made">0</div><div class="k">made</div></div>
+            <div class="cell"><div class="n" id="tm-hand">0</div><div class="k">handoffs</div></div>
+            <div class="cell"><div class="n" id="tm-help">0</div><div class="k">came back to help</div></div>
+            <div class="cell"><div class="n live" id="tm-peak">0</div><div class="k">peak at once</div></div>
+          </div>
+        </div>
+      </section>
 
-      <div class="crew" id="crew"></div>
-    </section>
+      <section class="panel crew" data-label="03 · crew">
+        <div class="body"><div class="dots" id="crewdots"></div></div>
+      </section>
+    </div>
 
-    <section class="build">
+    <div class="center">
+      <section class="panel web" data-label="04 · the web · agents helping agents">
+        <div class="body"><svg id="web" viewBox="0 0 400 300" aria-hidden="true"></svg></div>
+      </section>
+      <section class="panel feedp" data-label="05 · thought feed">
+        <div class="body" style="padding:24px 1px 1px;display:flex;flex-direction:column;gap:1px">
+          <div class="feedhead" style="padding:0 10px .4rem"><span class="runsbar" id="runsbar"></span></div>
+          <div class="feed" id="feed"></div>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel output" data-label="06 · output · the live website">
       <div class="frame">
         <div class="chrome">
-          <span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span>
+          <span class="dot" style="background:#ff5f57"></span>
+          <span class="dot" style="background:#febc2e"></span>
+          <span class="dot" style="background:#28c840"></span>
           <span class="url" id="url">about:blank</span>
         </div>
         <div class="viewport">
-          <div class="pg" id="pg">
+          <div id="pg">
             <div class="waiting" id="waiting">
               <div class="pulse"></div>
               <h3>Ready for your idea</h3>
@@ -171,20 +372,37 @@
         </div>
       </div>
     </section>
+
+    <section class="panel line" data-label="07 · assembly line · who hands work to whom">
+      <div class="linehead">
+        <span class="flowkey"><i class="kf"></i>hands off<i class="kb"></i>sends back for a fix<i class="kh"></i>came back to help</span>
+        <span class="nowbar" id="nowbar"></span>
+        <span class="flowstat" id="flowstat"></span>
+      </div>
+      <svg class="flowsvg" id="flowsvg" viewBox="0 0 1000 118" preserveAspectRatio="xMidYMid meet" aria-hidden="true"></svg>
+    </section>
   </main>
 
-  <footer>
-    <span class="tally"><b id="tally">0</b> ideas sent by the room</span>
-    <span class="join">scan the QR to join · everything runs <b>on this laptop</b></span>
-    <span id="mode"></span>
+  <footer class="botbar">
+    <span><b id="tally">0</b> ideas sent by the room</span>
+    <span class="spacer"></span>
+    <span class="qr">scan the QR to join · everything runs <b>on this laptop</b></span>
+    <span class="spacer"></span>
+    <span id="mode">local</span>
   </footer>
-
 <script>
   const NS = "http://www.w3.org/2000/svg";
-  const COLORS = { namer:"#F5A524", copywriter:"#2DD4BF", designer:"#8B5CF6", illustrator:"#F472B6",
-                   pricer:"#FBBF24", builder:"#38BDF8", reviewer:"#A3E635", skeptic:"#FB7185" };
+  const COLORS = { insight:"#E879F9", namer:"#F5A524", copywriter:"#2DD4BF", designer:"#8B5CF6",
+                   illustrator:"#F472B6", pricer:"#FBBF24", builder:"#38BDF8", reviewer:"#A3E635",
+                   skeptic:"#FB7185", critic:"#94A3B8", researcher:"#22D3EE", architect:"#F97316" };
   // what each agent is for, in plain words, so the room understands the crew
   const JOBS = {
+    architect:   { label: "shape",   name: "Architect",   job: "decides what sections the page needs" },
+    insight:     { label: "insight", name: "Insight",     job: "names the real problem" },
+    researcher:  { label: "facts",   name: "Researcher",  job: "finds the concrete detail" },
+    critic:      { label: "critic",  name: "Critic",      job: "reads the finished page" },
+    strategist:  { label: "strategy",name: "Strategist",  job: "picks the one thing to lead with" },
+    proofreader: { label: "proof",   name: "Proofreader", job: "reads it as prose, one last time" },
     namer:       { label: "name",    name: "Namer",       job: "invents the product name" },
     copywriter:  { label: "copy",    name: "Copywriter",  job: "writes the words" },
     designer:    { label: "design",  name: "Designer",    job: "picks the colours and type" },
@@ -248,6 +466,7 @@
 
   // ---------- the crew roster: name, job, live status ----------
   function drawCrew(nodes){
+    if (!crewEl) return;      // the stream replaced the roster
     crewEl.innerHTML = "";
     nodes.forEach(n=>{
       const meta = JOBS[n.key] || { name:n.key, job:"" };
@@ -375,7 +594,7 @@
   }
 
   function resetStage(idea, name){
-    web.innerHTML=""; crewEl.innerHTML=""; pageState=null;
+    web.innerHTML=""; if (crewEl) crewEl.innerHTML=""; pageState=null;
     document.getElementById("runTotal").textContent = "";
     pg.removeAttribute("style");
     pg.innerHTML = `<div class="waiting" id="waiting"><div class="pulse"></div><h3>Assembling the web…</h3><p>${esc(idea||"")}</p></div>`;
@@ -386,26 +605,288 @@
   // ---------- SSE ----------
   const es = new EventSource("/api/events");
   const J = e => JSON.parse(e.data);
-  es.addEventListener("info", e => { const d=J(e); const m = d.mock ? "mock mode" : "qwen · local";
+  es.addEventListener("info", e => { const d=J(e); const m = d.mock ? "mock mode" : ((d.model || "local model") + " · local");
     document.getElementById("mode").textContent = m; document.getElementById("modeTop").textContent = m;
     if(d.tally!=null) document.getElementById("tally").textContent=d.tally; });
   es.addEventListener("tally", e => { document.getElementById("tally").textContent = J(e).total; });
-  es.addEventListener("run-start", e => { const d=J(e); resetStage(d.idea, d.name); });
-  es.addEventListener("graph", e => { const d=J(e); drawGraph(d.nodes||[], d.edges||[]); });
+  // --- the stream: every event, kept ---------------------------------------
+  // The roster is the present tense and it overwrites itself. This keeps the
+  // history, so a room that looked away can look back and still see the run.
+  const feed = document.getElementById("feed");
+  const nowbar = document.getElementById("nowbar");
+  const runsbar = document.getElementById("runsbar");
+  const working = new Map();          // key -> {state, note}, for the chips
+  let feedT0 = 0;
+
+  // Every project keeps its whole story: each thought, each handoff, each span.
+  // The room can flip back to any build and see exactly how it happened.
+  const runs = [];
+  let live = null;        // the run receiving events
+  let shown = null;       // the run on screen (usually the live one)
+
+  function runLabel(r){ return r.product || (r.idea || "").slice(0, 18) || ("run " + r.n); }
+
+  function drawRuns(){
+    if (!runsbar) return;
+    runsbar.innerHTML = runs.map(r =>
+      `<span class="runchip${r === shown ? " on" : ""}${r === live && !r.done ? " live" : ""}"
+             data-n="${r.n}">${r.n} · ${esc(runLabel(r))}</span>`).join("");
+    runsbar.querySelectorAll(".runchip").forEach(ch => ch.onclick = () => showRun(+ch.dataset.n));
+  }
+
+  function renderEvent(r, ev){
+    const meta = JOBS[ev.key] || { name: ev.key };
+    const el = document.createElement("div");
+    el.className = "ev" + (ev.kind ? " " + ev.kind : "");
+    el.style.setProperty("--evc", COLORS[ev.key] || "#8A8FA0");
+    el.innerHTML = `<span class="dot"></span><div>
+        <div class="src">${esc(meta.name || ev.key)}</div>
+        <div class="said">${ev.said}</div>
+        <div class="at">${ev.at}</div></div>`;
+    return el;
+  }
+
+  function showRun(n){
+    const r = runs.find(x => x.n === n);
+    if (!r || !feed) return;
+    shown = r;
+    feed.innerHTML = "";
+    if (r !== live) {
+      const note = document.createElement("div");
+      note.className = "replaynote";
+      note.textContent = "replay · " + (r.idea || "");
+      feed.appendChild(note);
+    }
+    r.events.forEach(ev => feed.appendChild(renderEvent(r, ev)));
+    feed.scrollTop = r === live ? feed.scrollHeight : 0;
+    // the timeline replays too, so the overlap of any past build is inspectable
+    tlShow(r);
+    drawRuns();
+  }
+
+  function stamp(){
+    if (!feedT0) return "";
+    const s = (Date.now() - feedT0) / 1000;
+    return s.toFixed(1) + "s";
+  }
+
+  function log(key, said, kind){
+    if (!feed || !live) return;
+    const ev = { key, said, kind, at: stamp() };
+    live.events.push(ev);
+    if (shown === live) {
+      feed.appendChild(renderEvent(live, ev));
+      feed.scrollTop = feed.scrollHeight;
+    }
+  }
+
+  function drawNow(){
+    if (!nowbar) return;
+    if (!working.size){
+      nowbar.innerHTML = `<span class="idlebar">nobody working</span>`;
+      return;
+    }
+    nowbar.innerHTML = [...working.entries()].map(([k, w]) =>
+      `<span class="chip${w.state === "assisting" ? " assist" : ""}" style="--nc:${COLORS[k]||"#8A8FA0"}">
+         <i></i>${esc((JOBS[k]||{}).name||k)}${w.note ? `<span class="note">· ${esc(w.note)}</span>` : ""}</span>`
+    ).join("");
+  }
+
+  function setWorking(key, state, note){
+    if (state === "working" || state === "assisting") working.set(key, { state, note: note || "" });
+    else working.delete(key);
+    drawNow();
+  }
+
+  // --- the timeline ------------------------------------------------------
+  // Segments per agent, in run time. An agent that stops and starts again gets
+  // two bars, which is the point: the namer finishes early and comes back.
+  // Each run keeps its spans (for the concurrency count) and its handoffs (for
+  // the assembly line), so any past build replays intact.
+  let spans = {}, tlOrder = [], tlWall = 1;
+
+  // --- the assembly line -------------------------------------------------
+  // The crew as stations on a rail. Work travels between them as it is handed
+  // off; a fix sent back draws a return arc; an agent that comes back to help
+  // lights up a second time. It is the spider net, but in time order.
+  const svg = document.getElementById("flowsvg");
+  const NORDER = ["insight","researcher","namer","designer","copywriter","illustrator",
+                  "strategist","pricer","architect","builder","reviewer","skeptic","critic","proofreader"];
+  let stOrder = [], stX = {}, stEl = {}, helped = new Set(), flowN = 0, madeN = 0;
+  const RY = 52;
+
+  function svgEl(tag, attrs){
+    const el = document.createElementNS(NS, tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+
+  function flowReset(keys){
+    if (!svg) return;
+    stOrder = NORDER.filter(k => keys.includes(k)).concat(keys.filter(k => !NORDER.includes(k)));
+    stX = {}; stEl = {}; helped = new Set(); flowN = 0; madeN = 0;
+    svg.innerHTML = "";
+    const n = stOrder.length, x0 = 55, x1 = 945;
+    svg.appendChild(svgEl("line", { x1:x0, y1:RY, x2:x1, y2:RY, class:"rail" }));
+    const layer = svgEl("g", {}); svg.appendChild(layer);   // arcs draw under stations
+    svg._arcs = layer;
+    stOrder.forEach((k, i) => {
+      const x = n === 1 ? (x0+x1)/2 : x0 + i * ((x1 - x0) / (n - 1));
+      stX[k] = x;
+      const g = svgEl("g", {});
+      const ring = svgEl("circle", { cx:x, cy:RY, r:11, class:"st-ring",
+        stroke: COLORS[k] || "#8A8FA0", "stroke-opacity":".4" });
+      const lab = svgEl("text", { x:x, y:30, class:"st-lab" });
+      lab.textContent = (JOBS[k]||{}).label || k;
+      const made = svgEl("text", { x:x, y:80, class:"st-made" });
+      const badge = svgEl("text", { x:x+14, y:RY-10, class:"helped-badge" });
+      g.append(ring, lab, made, badge);
+      svg.appendChild(g);
+      stEl[k] = { ring, lab, made, badge, done:false };
+    });
+    const dots = document.getElementById("crewdots");
+    if (dots) dots.innerHTML = stOrder.map(k =>
+      `<span class="cd" id="cd-${k}" style="--cc:${COLORS[k]||"#8A8FA0"}"><i></i>${(JOBS[k]||{}).label||k}</span>`).join("");
+    flowStat();
+  }
+
+  function flowState(key, state){
+    const cd = document.getElementById("cd-" + key);
+    if (cd) cd.className = "cd" + (state === "working" ? " on"
+        : state === "assisting" ? " assist" : state === "done" ? " done" : "");
+    const e = stEl[key]; if (!e) return;
+    e.ring.setAttribute("class", "st-ring" + (state === "working" ? " working"
+        : state === "assisting" ? " assisting" : ""));
+    if (state === "working" || state === "assisting"){
+      e.ring.setAttribute("fill", "var(--panel)");
+      e.ring.setAttribute("stroke", state === "assisting" ? "var(--amber)" : (COLORS[key]||"#8A8FA0"));
+      e.ring.setAttribute("stroke-opacity", "1");
+      e.lab.setAttribute("class", "st-lab on");
+      // a station that had already finished and is active again came back to help
+      if (state === "assisting" && e.done && !helped.has(key)){
+        helped.add(key); e.badge.textContent = "↺ help"; flowStat();
+        if (live) live.helped = [...helped];
+      }
+    } else if (state === "done"){
+      e.done = true;
+      e.ring.setAttribute("fill", COLORS[key] || "#8A8FA0");
+      e.ring.setAttribute("stroke", COLORS[key] || "#8A8FA0");
+      e.ring.setAttribute("stroke-opacity", "1");
+    }
+  }
+
+  function flowMade(key, text){
+    const cd = document.getElementById("cd-" + key); if (cd) cd.className = "cd done";
+    const e = stEl[key]; if (!e) return;
+    if (!e.done) madeN++;
+    e.done = true;
+    e.ring.setAttribute("class", "st-ring");
+    e.ring.setAttribute("fill", COLORS[key] || "#8A8FA0");
+    e.ring.setAttribute("stroke", COLORS[key] || "#8A8FA0");
+    e.ring.setAttribute("stroke-opacity", "1");
+    if (text){ e.made.textContent = text.length > 13 ? text.slice(0,12)+"…" : text; }
+    flowStat();
+  }
+
+  function arcPath(xa, xb, back){
+    const dir = back ? 1 : -1;
+    const dx = Math.abs(xb - xa);
+    const lift = back ? Math.min(34, 16 + dx*0.05) : Math.min(30, 14 + dx*0.06);
+    const cy = RY + dir * lift;
+    return "M " + xa + " " + RY + " Q " + ((xa+xb)/2) + " " + cy + " " + xb + " " + RY;
+  }
+
+  function flowHandoff(from, to, back, animate){
+    if (!svg || stX[from] == null || stX[to] == null) return;
+    flowN++; flowStat();
+    const d = arcPath(stX[from], stX[to], back);
+    const p = svgEl("path", { d:d, class:"flowarc " + (back ? "back" : "fwd"),
+      "stroke-width": back ? 1.6 : 2, "stroke-opacity": animate ? ".9" : ".26" });
+    svg._arcs.appendChild(p);
+    if (!animate) return;                    // replay leaves a faint static trace
+    const dot = svgEl("circle", { r:3.2, class:"baton" });
+    const mo = svgEl("animateMotion", { dur:"0.85s", repeatCount:"1", path:d, fill:"freeze" });
+    dot.appendChild(mo); svg._arcs.appendChild(dot);
+    const fade = svgEl("animate", { attributeName:"stroke-opacity", from:".9", to:"0",
+      begin:"0.5s", dur:"1s", fill:"freeze" });
+    p.appendChild(fade);
+    setTimeout(function(){ p.remove(); dot.remove(); }, 1550);
+  }
+
+  function flowStat(){
+    const el = document.getElementById("flowstat"); if (!el) return;
+    const edges = [];
+    Object.values(spans).flat().forEach(function(s){ edges.push([s.from,1]);
+      edges.push([s.to === null ? tlWall : s.to, -1]); });
+    edges.sort(function(a,b){ return a[0]-b[0] || b[1]-a[1]; });
+    let cur=0, peak=0; for (const e of edges){ cur+=e[1]; peak=Math.max(peak,cur); }
+    const set = (id,v) => { const n=document.getElementById(id); if (n) n.textContent = v; };
+    set("tm-made", madeN); set("tm-hand", flowN); set("tm-help", helped.size); set("tm-peak", peak);
+    el.innerHTML = "<b>" + madeN + "</b> made · <b>" + flowN + "</b> handoffs · " +
+      "<b>" + helped.size + "</b> back to help · peak <b>" + peak + "</b>";
+  }
+
+  // spans are still tracked, only for the peak-at-once number now
+  function tlReset(keys){ spans = {}; tlOrder = keys.slice(); tlWall = 1;
+    if (live){ live.spans = spans; live.order = tlOrder; live.wall = 1; } flowReset(keys); }
+  function tlSpan(key, edge, at){
+    if (!spans[key]) spans[key] = [];
+    if (edge === "start") spans[key].push({ from:at, to:null });
+    else { const o = spans[key].filter(function(s){return s.to===null;}).pop(); if (o) o.to = at; }
+    tlWall = Math.max(tlWall, at, 1); if (live) live.wall = tlWall;
+    if (shown === live) flowStat();
+  }
+
+  // replay a stored build: stations all done, its handoffs as faint traces
+  function tlShow(r){
+    if (!r || !svg) return;
+    spans = r.spans || {}; tlWall = r.wall || 1;
+    flowReset(r.order && r.order.length ? r.order : stOrder);
+    (r.made || []).forEach(function(m){ flowMade(m.key, m.text); });
+    (r.helped || []).forEach(function(k){ helped.add(k); if (stEl[k]) stEl[k].badge.textContent = "↺ help"; });
+    (r.flows || []).forEach(function(f){ flowHandoff(f.from, f.to, f.back, false); });
+    flowStat();
+  }
+
+  let runStartedAt = 0;
+  es.addEventListener("span", e => { const d=J(e); tlSpan(d.key, d.edge, d.at); });
+  es.addEventListener("run-start", e => {
+    const d=J(e); runStartedAt = Date.now(); feedT0 = Date.now();
+    activeId = d.id != null ? String(d.id) : null; renderDrawer();
+    const r = { n: runs.length + 1, idea: d.idea || "", name: d.name || "",
+                product: null, events: [], spans: {}, order: [], wall: 1,
+                flows: [], made: [], helped: [], done: false };
+    runs.push(r); live = r; shown = r;
+    if (feed) feed.innerHTML = "";
+    working.clear(); drawNow(); drawRuns();
+    resetStage(d.idea, d.name);
+    log("builder", "took the idea: <b>" + esc(d.idea||"") + "</b>");
+  });
+  es.addEventListener("graph", e => { const d=J(e); drawGraph(d.nodes||[], d.edges||[]); tlReset((d.nodes||[]).map(n=>n.key)); });
   es.addEventListener("agent-state", e => {
     const d=J(e); setAgent(d.key, d.state, d.note);
     if (d.state === "working" || d.state === "assisting") setThinking(d.key, d.note);
+    setWorking(d.key, d.state, d.note);
+    flowState(d.key, d.state);
+    if (d.state === "working") log(d.key, esc(d.note || "started"), "think");
+    else if (d.state === "assisting") log(d.key, "finished early, so it is helping: <b>" + esc(d.note||"") + "</b>");
+    else if (d.state === "done" && d.note) log(d.key, esc(d.note));
   });
-  es.addEventListener("flow", e => {
+  es.addEventListener("flow", e => { const f=J(e);
+    log(f.from, "handed <b>" + esc(f.what||"its work") + "</b> to " + esc((JOBS[f.to]||{}).name||f.to));
     const d=J(e);
     pulse(d.from, d.to, d.what);
+    // a station that is earlier in the pipeline than the sender means a fix sent back
+    const back = stX[d.to] != null && stX[d.from] != null && stX[d.to] < stX[d.from];
+    flowHandoff(d.from, d.to, back, true);
+    if (live) { (live.flows = live.flows || []).push({ from:d.from, to:d.to, back:back }); }
     // show on the receiving agent that it just got help, and from whom
     const giver = (JOBS[d.from]||{}).name || d.from;
     setHelp(d.to, "got " + (d.what||"work") + " from " + giver);
   });
   es.addEventListener("worker-done", e => {
     const d=J(e), p=d.payload;
-    if(d.key==="namer" && p) applyName(p);
+    if(d.key==="namer" && p) { applyName(p); if (live) { live.product = p.name || null; drawRuns(); } }
     if(d.key==="illustrator" && p) applyArt(p);
     if(d.key==="copywriter" && p) applyCopy(p);
     if(d.key==="designer" && p) applyDesign(p);
@@ -421,6 +902,42 @@
     if (d.key==="pricer" && p.pricing) setMade(d.key, p.pricing.map(t=>esc(t.price)).join(" · "));
     if (d.key==="reviewer")    setMade(d.key, "&ldquo;" + esc(p.value || "") + "&rdquo;");
     if (d.key==="skeptic")     setMade(d.key, esc((p.note || "").slice(0, 90)) + "…");
+
+    // the same artefact, kept in the stream so it survives the next agent
+    const made = {
+      insight:     () => p.tension ? "found the tension: <b>" + esc(p.tension) + "</b>" : "found no clear tension",
+      researcher:  () => p.facts ? "dug up: <b>" + esc(p.facts) + "</b>" : "found nothing usable",
+      namer:       () => "named it <b>" + esc(p.name || "") + "</b>",
+      copywriter:  () => "wrote the hero: <b>" + esc(p.headline || "") + "</b>",
+      designer:    () => "chose <b>" + esc(p.family || p.primary || "") + "</b> for the palette",
+      illustrator: () => "drew a <b>" + esc(p.kind || "") + "</b>" + (p.rows && p.rows.length ? " showing " + esc(p.rows.slice(0,3).join(", ")) : ""),
+      pricer:      () => p.pricing ? "priced it at <b>" + p.pricing.map(t=>esc(t.price)).join(" / ") + "</b>" : "set the tiers",
+      reviewer:    () => "sharpened the button to <b>" + esc(p.value || "") + "</b>",
+      skeptic:     () => "asked: <b>" + esc((p.note || "").slice(0, 120)) + "</b>",
+      critic:      () => p.changed ? "read the whole page and sent one line back" : "read the whole page, nothing worth changing",
+      strategist:  () => "chose the hook",
+      proofreader: () => "final clean pass",
+    }[d.key];
+    if (made) log(d.key, made());
+
+    // the station on the assembly line shows what it produced
+    const short = {
+      insight:     () => "the tension",
+      researcher:  () => "the facts",
+      namer:       () => p.name || "the name",
+      copywriter:  () => (p.headline || "the copy"),
+      designer:    () => (p.family || p.primary || "palette"),
+      illustrator: () => (p.kind || "artwork"),
+      pricer:      () => p.pricing ? p.pricing.map(t=>t.price).join(" ") : "tiers",
+      reviewer:    () => "sharper cta",
+      skeptic:     () => "a question",
+      critic:      () => p.changed ? "one fix" : "clean",
+      strategist:  () => "the hook",
+      proofreader: () => "tidy",
+    }[d.key];
+    const txt = short ? short() : "";
+    flowMade(d.key, txt);
+    if (live) { (live.made = live.made || []).push({ key:d.key, text:txt }); }
   });
   // how long each agent actually took, and the whole run
   es.addEventListener("timing", e => {
@@ -428,11 +945,94 @@
     if (d.key === "total") { const t = document.getElementById("runTotal"); if (t) t.textContent = "built in " + secs; return; }
     const el = document.getElementById("ms-" + d.key); if (el) el.textContent = secs;
   });
-  es.addEventListener("revise", e => {
+  es.addEventListener("revise", e => { const rv=J(e);
+    log("copywriter", "rewrote the " + esc(rv.field||"copy")
+        + (rv.by && rv.by !== "copywriter" ? " after the " + esc(rv.by) + "'s note" : "")
+        + ": <b>" + esc(rv.value||"") + "</b>");
     const d = J(e);
     applyRevise(d);
     setMade("copywriter", "&ldquo;" + esc(d.value || "") + "&rdquo;<br><span style=\'opacity:.6;font-size:.66rem\'>rewritten after the " + esc(d.by || "") + "</span>");
   });
+  // ---------- queue drawer: what's active, next, waiting, finished ----------
+  const KEY = new URLSearchParams(location.search).get("key") || "";
+  let qIdeas = [], activeId = null, autoOn = false, nextText = "";
+  const drawer = document.getElementById("drawer");
+  const drawerBtn = document.getElementById("drawerBtn");
+
+  function setDrawer(open){
+    drawer.classList.toggle("open", open);
+    drawerBtn.classList.toggle("on", open);
+    try { localStorage.setItem("stageDrawer", open ? "1" : "0"); } catch(e){}
+  }
+  drawerBtn.onclick = () => setDrawer(!drawer.classList.contains("open"));
+  document.getElementById("drawerClose").onclick = () => setDrawer(false);
+  try { if (localStorage.getItem("stageDrawer") === "1") setDrawer(true); } catch(e){}
+
+  // presenter (stage opened with ?key=) can flip auto-advance from here
+  const autoRow = document.getElementById("autoRow");
+  if (KEY){
+    autoRow.classList.add("click");
+    autoRow.onclick = () => fetch("/api/auto?key=" + encodeURIComponent(KEY) + "&on=" + (!autoOn), {method:"POST"});
+  }
+  function renderAuto(){
+    autoRow.classList.toggle("on", autoOn);
+    document.getElementById("autoVal").textContent = autoOn ? "on" : "off";
+    document.getElementById("drawerNext").textContent = (autoOn && nextText) ? ("next up → " + nextText) : "";
+  }
+
+  function qItem(i, cls, extra){
+    const ms = i.ms ? " · " + (i.ms/1000).toFixed(0) + "s" : "";
+    const nm = i.name ? " · " + esc(i.name) : "";
+    return `<div class="qi ${cls}"><span class="qd"></span><div><div class="qt">${esc(i.text)}</div>`
+      + `<div class="qm">#${esc(i.id)}${nm}${extra||""}${ms}</div></div></div>`;
+  }
+  function group(title, items, clsFn, extraFn){
+    if (!items.length) return "";
+    return `<div class="qgrp"><div class="gh">${title} <b>${items.length}</b></div>`
+      + items.map(i => qItem(i, typeof clsFn === "function" ? clsFn(i) : clsFn, extraFn ? extraFn(i) : "")).join("") + `</div>`;
+  }
+  function renderDrawer(){
+    const active   = qIdeas.filter(i => i.status === "running" || String(i.id) === activeId);
+    const activeIds = new Set(active.map(i => String(i.id)));
+    const finished = qIdeas.filter(i => (i.status === "done" || i.status === "built") && !activeIds.has(String(i.id)));
+    const finIds   = new Set(finished.map(i => String(i.id)));
+    const waiting  = qIdeas.filter(i => !activeIds.has(String(i.id)) && !finIds.has(String(i.id)));
+    const nextItem = waiting.find(i => nextText && i.text === nextText) || (autoOn ? waiting[0] : null);
+    const isNext = i => nextItem && i.id === nextItem.id;
+    const body = document.getElementById("qbody");
+    const html =
+      group("Active now", active, "active")
+      + group("Waiting", waiting, i => isNext(i) ? "waiting next" : "waiting", i => isNext(i) ? " · next up" : "")
+      + group("Finished", finished, "done");
+    body.innerHTML = html || '<div class="qempty">No ideas yet. When the room submits, they appear here.</div>';
+    document.getElementById("drawerCount").textContent = qIdeas.length ? qIdeas.length : "";
+  }
+
+  es.addEventListener("queue", e => { const d=J(e); qIdeas = d.ideas || []; renderDrawer(); });
+  es.addEventListener("auto",  e => { const d=J(e); autoOn = !!d.on; nextText = d.next || ""; renderAuto(); renderDrawer(); });
+  es.addEventListener("run-done", e => { activeId = null; renderDrawer(); });
+
+  // ---------- full-screen any block, to read the agents' communication ----------
+  // The web (the agents) and the feed (the agents talking) full-screen together as
+  // one combined view: the model graph on one side, its live conversation on the other.
+  function clearFull(){ document.querySelectorAll("main .full").forEach(p => p.classList.remove("full")); }
+  function toggleFull(el){ const was = el.classList.contains("full"); clearFull(); if (!was) el.classList.add("full"); }
+  document.querySelectorAll("main .panel").forEach(p => {
+    const combined = (p.classList.contains("web") || p.classList.contains("feedp")) ? p.closest(".center") : null;
+    const target = combined || p;
+    const b = document.createElement("button");
+    b.className = "expand"; b.textContent = "⛶";
+    b.title = combined ? "full screen: the agents + their conversation (Esc to exit)" : "full screen (Esc to exit)";
+    b.onclick = (ev) => { ev.stopPropagation(); toggleFull(target); };
+    p.appendChild(b);
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape"){
+      if (document.querySelector("main .full")) clearFull();
+      else if (drawer.classList.contains("open")) setDrawer(false);
+    }
+  });
+
   es.onerror = () => {/* auto-reconnects */};
 </script>
 </body>

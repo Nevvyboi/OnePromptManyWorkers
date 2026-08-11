@@ -49,7 +49,8 @@ pres.defineLayout({ name: "W", width: 13.333, height: 7.5 });
 pres.layout = "W";
 const W = 13.333, H = 7.5, MX = 0.92;
 
-function slide() { const s = pres.addSlide(); s.background = { color: BG }; return s; }
+let count = 0;
+function slide() { count++; const s = pres.addSlide(); s.background = { color: BG }; return s; }
 function eyebrow(s, text, y = 0.62, color = INDIGO) {
   s.addText(text.toUpperCase(), { x: MX, y, w: 10, h: 0.32, fontFace: DISP, bold: true, fontSize: 11, color, charSpacing: 3 });
 }
@@ -69,6 +70,16 @@ async function chip(s, cx, cy, d, name, color) {
 function ray(s, ox, oy, ex, ey, color) {
   const x = Math.min(ox, ex), y = Math.min(oy, ey), w = Math.abs(ex - ox), h = Math.abs(ey - oy);
   s.addShape("line", { x, y, w, h, flipV: ey < oy, line: { color, width: 1.75 } });
+}
+// Three short lines the room can actually read. A slide with one sentence on it
+// leaves the audience listening only; these give them something to hold onto.
+function points(s, x, y, w, items, color, size) {
+  const gap = 0.44;
+  items.forEach((t, i) => {
+    dot(s, x + 0.08, y + i * gap + 0.13, 0.14, color || INDIGO);
+    s.addText(t, { x: x + 0.32, y: y + i * gap - 0.04, w: w - 0.32, h: 0.42,
+      fontFace: BODY, fontSize: size || 13.5, color: MUTED, lineSpacing: 17, valign: "middle" });
+  });
 }
 function stat(s, x, y, big, label, color) {
   s.addText(big, { x, y, w: 2.0, h: 0.75, fontFace: DISP, bold: true, fontSize: 38, color: color || INK });
@@ -208,6 +219,11 @@ async function build() {
       { x: MX, y: 3.1, w: 5.7, h: 1.5, fontFace: BODY, fontSize: 18, color: MUTED, lineSpacing: 28 });
     s.addText("A prompt is you calling that function.",
       { x: MX, y: 5.1, w: 6, h: 0.5, fontFace: MONO, fontSize: 13, color: INDIGO });
+    points(s, MX, 5.62, 5.9, [
+      "Ask the same question twice and you get two different answers.",
+      "It cannot look anything up unless you hand it a tool.",
+      "Everything tonight is scaffolding around this one call.",
+    ]);
     card(s, 7.4, 1.7, 5.0, 3.8, { fill: INK });
     s.addText([
       { text: "String", options: { color: "C4B5FD" } }, { text: " reply = ", options: { color: "9AA1B0" } },
@@ -262,8 +278,13 @@ async function build() {
       if (i < tiles.length - 1) s.addText("+", { x: x + tw, y: ty + tw / 2 - 0.4, w: tgap, h: 0.8, align: "center", fontFace: DISP, bold: true, fontSize: 30, color: FAINT });
       x += tw + tgap;
     }
-    s.addText("That is an agent. Everything else is decoration. The loop is where the magic actually lives.",
-      { x: 2.5, y: 5.5, w: 8.33, h: 0.8, align: "center", fontFace: BODY, fontSize: 18, color: MUTED, lineSpacing: 26 });
+    s.addText("That is an agent. Everything else is decoration.",
+      { x: 2.5, y: 5.15, w: 8.33, h: 0.5, align: "center", fontFace: BODY, fontSize: 18, color: MUTED });
+    points(s, 3.35, 5.75, 7.0, [
+      "Model: guesses the next step. Tools: let it change something real.",
+      "The loop: run again until the job is actually finished, not just answered.",
+      "Drop any one of the three and you are back to a chatbot.",
+    ], TEAL);
     s.addNotes("The whole definition: an agent is a model, plus tools it can call, wrapped in a loop. Everything else is a flavour of this. Model is the brain, tools the hands, the loop is where the magic lives.");
   }
 
@@ -276,7 +297,12 @@ async function build() {
     s.addText("The model does not answer once. It works in a loop until the job is actually done, checking its own output along the way.",
       { x: MX, y: 3.7, w: 5.3, h: 1.5, fontFace: BODY, fontSize: 17, color: MUTED, lineSpacing: 26 });
     s.addText("Take away the loop and you are back to a chatbot.",
-      { x: MX, y: 5.4, w: 5.6, h: 0.5, fontFace: MONO, fontSize: 12, color: FAINT });
+      { x: MX, y: 5.35, w: 5.6, h: 0.4, fontFace: MONO, fontSize: 12, color: FAINT });
+    points(s, MX, 5.8, 5.6, [
+      "REASON: decide the next move from what it knows right now.",
+      "ACT: call a tool. This is the only part that touches the real world.",
+      "OBSERVE: read what came back, and ask whether the job is done.",
+    ], TEAL);
     const cx = 9.7, cy = 3.95, r = 1.65;
     const P = [[cx, cy - r, TEAL], [cx + r * 0.87, cy + r * 0.5, VIOLET], [cx - r * 0.87, cy + r * 0.5, AMBER]];
     for (let i = 0; i < 3; i++) {
@@ -304,8 +330,8 @@ async function build() {
     s.addText([{ text: "Five layers under every ", options: { color: INK } }, { text: "agent.", options: { color: INDIGO } }],
       { x: MX, y: 1.15, w: 11, h: 1, fontFace: DISP, bold: true, fontSize: 32 });
     const layers = [
-      ["FiServer", SKY, "runtime", "Ollama on localhost:11434.", "qwen2.5:3b on stage, 1.5b for background work."],
-      ["FiShare2", VIOLET, "orchestration", "LangChain4j 1.0 AiServices.", "Interfaces with annotations. No implementations."],
+      ["FiServer", SKY, "runtime", "A model behind one interface.", "Local on a laptop, or a hosted API. Swappable."],
+      ["FiShare2", VIOLET, "orchestration", "LangChain4j AiServices.", "Java interfaces with annotations. No implementations."],
       ["FiTool", TEAL, "tools", "Plain Java methods.", "Whatever you would let an intern call."],
       ["FiDatabase", AMBER, "memory", "A queue and a result per idea.", "Nothing global. Each run is its own object."],
       ["FiBox", INDIGO, "structure", "Java records: Copy, Palette, Tier.", "The model fills a type, it does not write prose."],
@@ -319,7 +345,7 @@ async function build() {
         { text: layers[i][4], options: { color: MUTED } },
       ], { x: 4.4, y, w: 8, h: 0.4, fontFace: BODY, fontSize: 16.5, valign: "middle" });
     }
-    s.addNotes("Five layers. Runtime, Ollama with Qwen. Orchestration, LangChain4j or Spring AI. Tools, the hands. Memory, the notebook. Structured output, so the answer comes back as data, not a paragraph. Hold that last one.");
+    s.addNotes("Five layers. Runtime, whatever model you point it at. Orchestration, LangChain4j or Spring AI. Tools, the hands. Memory, the notebook. Structured output, so the answer comes back as data, not a paragraph. Hold that last one.");
   }
 
   // =============================================== 12 WHY JAVA
@@ -334,7 +360,12 @@ async function build() {
       { text: ", not in a Python service bolted on the side." },
     ], { x: MX, y: 2.9, w: 5.7, h: 2, fontFace: BODY, fontSize: 17, color: MUTED, lineSpacing: 27 });
     s.addText("Behind Spring Security. Inside your transactions. Beside your data.",
-      { x: MX, y: 5.2, w: 5.7, h: 0.8, fontFace: MONO, fontSize: 12, color: INDIGO, lineSpacing: 20 });
+      { x: MX, y: 5.05, w: 5.7, h: 0.5, fontFace: MONO, fontSize: 12, color: INDIGO, lineSpacing: 20 });
+    points(s, MX, 5.62, 5.9, [
+      "No rewrite: the agent is a bean like any other service.",
+      "Your existing auth, logging and transactions still apply to it.",
+      "Typed records mean the compiler checks the model's answer.",
+    ]);
     const rows = [
       ["FiLink", INDIGO, "LangChain4j", "agents, tools and AI Services, the idiomatic way"],
       ["FiWind", TEAL, "Spring AI", "the same, wired into Spring Boot"],
@@ -353,14 +384,18 @@ async function build() {
   // =============================================== 13 LOCAL + FREE
   {
     const s = slide();
-    eyebrow(s, "The model, tonight");
-    s.addText([{ text: "Qwen.", options: { color: INDIGO } }, { text: " Local. Free.\nNever leaves the room.", options: { color: INK } }],
+    eyebrow(s, "Where it runs");
+    s.addText([{ text: "Local.", options: { color: INDIGO } }, { text: " Free.\nNever leaves the room.", options: { color: INK } }],
       { x: MX, y: 1.6, w: 6, h: 2, fontFace: DISP, bold: true, fontSize: 36, lineSpacing: 44 });
-    s.addText("Ollama serves the model from this laptop. No cloud call, no per-token bill, no data leaving the building. That last part is what your regulated clients care about most.",
+    s.addText("The model runs on this laptop. No cloud call, no per-token bill, no data leaving the building. That last part is what your regulated clients care about most.",
       { x: MX, y: 3.85, w: 5.6, h: 1.5, fontFace: BODY, fontSize: 16, color: MUTED, lineSpacing: 25 });
-    stat(s, MX, 5.55, "3B", "params, on a laptop", SKY);
-    stat(s, MX + 2.0, 5.55, "$0", "per token, ever", TEAL);
-    stat(s, MX + 3.85, 5.55, "0", "bytes leave the room", INDIGO);
+    points(s, MX, 5.28, 5.9, [
+      "Nothing to sign, no data processing agreement, no vendor review.",
+      "It still works on a plane, or when the venue wifi dies.",
+    ], TEAL);
+    stat(s, MX, 6.1, "3B", "params, on a laptop", SKY);
+    stat(s, MX + 2.0, 6.1, "$0", "per token, ever", TEAL);
+    stat(s, MX + 3.85, 6.1, "0", "bytes leave the room", INDIGO);
     const bx = 7.7, by = 1.7, bw = 4.2, bh = 3.9;
     s.addShape("roundRect", { x: bx, y: by, w: bw, h: bh, rectRadius: 0.12, fill: { color: CARD }, line: { color: HAIR, width: 1.2, dashType: "dash" }, shadow: softShadow() });
     s.addText("YOUR BUILDING", { x: bx + 0.3, y: by + 0.22, w: 3, h: 0.3, fontFace: MONO, fontSize: 10, color: TEAL, charSpacing: 2 });
@@ -376,7 +411,7 @@ async function build() {
     await chip(s, 12.55, 2.15, 0.8, "FiCloud", FAINT);
     s.addShape("line", { x: 12.15, y: 1.75, w: 0.8, h: 0.8, line: { color: ROSE, width: 2.5 } });
     s.addText("no cloud", { x: 11.85, y: 2.72, w: 1.4, h: 0.3, align: "center", fontFace: MONO, fontSize: 10, color: FAINT });
-    s.addNotes("Qwen through Ollama, entirely on this laptop. The client's data never leaves the building. No token bill that scales with success. Works on a plane. For a bank, it never leaves the building is the whole conversation.");
+    s.addNotes("The model runs entirely on this laptop. The client's data never leaves the building. No token bill that scales with success. Works on a plane. For a bank, it never leaves the building is the whole conversation.");
   }
 
   (await act("iv", "Act four", "Control Beyond\nthe Prompt", "The prompt is one lever. There are five more, and they are where reliability comes from.", VIOLET, "FiSliders"))
@@ -433,7 +468,9 @@ async function build() {
         { x, y: ly, w, h: 0.32, align, fontFace: MONO, fontSize: 11, charSpacing: 1 });
     });
     s.addText("Good agent design is good constraint design.",
-      { x: 2.5, y: 6.5, w: 8.33, h: 0.5, align: "center", fontFace: BODY, fontSize: 17, color: MUTED });
+      { x: 2.5, y: 6.35, w: 8.33, h: 0.45, align: "center", fontFace: BODY, fontSize: 17, color: MUTED });
+    s.addText("When output is wrong, the fix is almost never a longer prompt. It is a tighter tool, a stricter schema, or a different agent doing the job.",
+      { x: 2.9, y: 6.8, w: 7.5, h: 0.55, align: "center", fontFace: BODY, fontSize: 13, color: FAINT, lineSpacing: 17 });
     s.addNotes("The line to remember, then stop for two seconds. You don't program an agent, you constrain it. Prompt says what, tools say how far, schema says what shape, orchestration says who. Good agent engineering is good constraint design.");
   }
 
@@ -516,7 +553,12 @@ async function build() {
     s.addText([{ text: "The prompt barely ", options: { color: INK } }, { text: "changed.", options: { color: INDIGO } }],
       { x: MX, y: 1.6, w: 6, h: 1.2, fontFace: DISP, bold: true, fontSize: 36 });
     s.addText("The power came from the levers around it, not from a cleverer sentence.",
-      { x: MX, y: 3.1, w: 5.4, h: 1.2, fontFace: BODY, fontSize: 18, color: MUTED, lineSpacing: 27 });
+      { x: MX, y: 3.0, w: 5.4, h: 0.9, fontFace: BODY, fontSize: 18, color: MUTED, lineSpacing: 27 });
+    points(s, MX, 4.15, 5.6, [
+      "Same instruction, wildly different output, because the shape changed.",
+      "Prompt tweaking is the slowest way to fix an agent.",
+      "Schema and orchestration are the two levers people forget.",
+    ]);
     const rows = [
       ["FiMessageSquare", FAINT, "lever 01", "Prompt", "one plain English line", false],
       ["FiCode", INDIGO, "lever 03", "Schema", "a sentence becomes a typed crew", true],
@@ -531,6 +573,89 @@ async function build() {
         { x: x + 2.55, y: y + 0.3, w: 2.5, h: 0.35, fontFace: BODY, fontSize: 14, valign: "middle" });
     }
     s.addNotes("Look what steers the crew. The prompt barely changes. The real control is structured output turning a sentence into a typed crew, and orchestration deciding they run as a team. Two levers you could never reach from the prompt alone.");
+  }
+
+  // =============================================== HARNESS 1: WHAT IT IS
+  {
+    const s = slide();
+    eyebrow(s, "The part nobody demos", 0.62, VIOLET);
+    s.addText([{ text: "The model is the brain.\nThe ", options: { color: INK } }, { text: "harness", options: { color: INDIGO } }, { text: " is the body.", options: { color: INK } }],
+      { x: MX, y: 1.45, w: 7.2, h: 1.9, fontFace: DISP, bold: true, fontSize: 36, lineSpacing: 46 });
+    s.addText("A brain in a jar cannot build a website. Everything between the model's guess and the finished page is the harness, and that is where the quality actually comes from.",
+      { x: MX, y: 3.5, w: 5.9, h: 1.3, fontFace: BODY, fontSize: 17, color: MUTED, lineSpacing: 26 });
+    points(s, MX, 5.0, 5.9, [
+      "Swap the model and the harness is untouched.",
+      "Improve the harness and every model gets better.",
+      "The same prompt, through a better harness, is a better page.",
+    ], VIOLET);
+    const items = [
+      ["FiCpu", SKY, "the model", "guesses words"],
+      ["FiShield", ROSE, "guards", "refuse bad output"],
+      ["FiBox", VIOLET, "structure", "decide the page shape"],
+      ["FiImage", TEAL, "assets", "real pictures, real palettes"],
+      ["FiCheckCircle", AMBER, "the page", "what the room sees"],
+    ];
+    for (let i = 0; i < items.length; i++) {
+      const y = 1.75 + i * 1.02, x = 7.5;
+      card(s, x, y, 4.9, 0.86, { fill: i === 0 ? CARD2 : CARD });
+      await chip(s, x + 0.55, y + 0.43, 0.54, items[i][0], items[i][1]);
+      s.addText(items[i][2], { x: x + 1.0, y: y + 0.1, w: 2.2, h: 0.35, fontFace: MONO, fontSize: 11.5, color: INK, charSpacing: 1 });
+      s.addText(items[i][3], { x: x + 1.0, y: y + 0.42, w: 3.6, h: 0.35, fontFace: BODY, fontSize: 12.5, color: MUTED });
+      if (i < items.length - 1) s.addShape("line", { x: x + 0.55, y: y + 0.86, w: 0, h: 0.16, line: { color: FAINT, width: 1.4, endArrowType: "triangle" } });
+    }
+    s.addNotes("Everyone demos the model. Nobody demos the harness, and the harness is the product. A brain in a jar cannot build a website. Between the model's guess and the finished page sits validation, structure, assets, taste rules. Swap the model, the harness is untouched. Improve the harness and every model you ever plug in gets better. That is the leverage.");
+  }
+
+  // =============================================== HARNESS 2: WHAT WE BUILT
+  {
+    const s = slide();
+    eyebrow(s, "What we actually built", 0.62, VIOLET);
+    s.addText([{ text: "Sixteen agents and a ", options: { color: INK } }, { text: "set of rules.", options: { color: INDIGO } }],
+      { x: MX, y: 1.1, w: 11, h: 0.9, fontFace: DISP, bold: true, fontSize: 32 });
+    s.addText("Every one of these started as output we were not happy with.",
+      { x: MX, y: 1.95, w: 8, h: 0.4, fontFace: BODY, fontSize: 15.5, color: MUTED });
+    const built = [
+      ["FiUsers", VIOLET, "16 agents", "Insight, researcher, namer, copywriter, designer, illustrator, pricer, strategist, architect, critic, skeptic, proofreader and more."],
+      ["FiShield", ROSE, "18 taste rules", "Deterministic checks that reject em dashes, three equal cards, AI purple, low-contrast buttons, widowed headlines."],
+      ["FiLayout", TEAL, "Page architect", "The AI picks the sections: a food truck gets a menu and a story, a tool gets three steps. No fixed template."],
+      ["FiRefreshCw", AMBER, "Best of three", "The crew drafts several names and headlines, then a judge picks the sharpest one."],
+    ];
+    for (let i = 0; i < built.length; i++) {
+      const y = 2.55 + i * 1.12;
+      card(s, MX, y, 11.5, 0.98);
+      await chip(s, MX + 0.6, y + 0.49, 0.58, built[i][0], built[i][1]);
+      s.addText(built[i][2], { x: MX + 1.15, y: y + 0.12, w: 2.6, h: 0.38, fontFace: DISP, bold: true, fontSize: 16, color: INK, valign: "middle" });
+      s.addText(built[i][3], { x: MX + 3.75, y: y + 0.1, w: 7.5, h: 0.8, fontFace: BODY, fontSize: 12.5, color: MUTED, lineSpacing: 16, valign: "middle" });
+    }
+    s.addNotes("This is the harness. Sixteen agents, each with one job. Eighteen deterministic taste rules that reject output the model was happy with. An architect that decides what sections the page even needs, so a food truck gets a menu and a story instead of the same template. And best of three on the name and the headline. Every one of these exists because we looked at the output and were not happy.");
+  }
+
+  // =============================================== HARNESS 3: BENEFITS
+  {
+    const s = slide();
+    eyebrow(s, "Why this is worth your time", 0.62, TEAL);
+    s.addText([{ text: "The harness is the ", options: { color: INK } }, { text: "asset.", options: { color: INDIGO } }],
+      { x: MX, y: 1.15, w: 11, h: 0.9, fontFace: DISP, bold: true, fontSize: 32 });
+    const bens = [
+      ["FiRefreshCw", INDIGO, "Model agnostic", "Point it at a local model, or a frontier API. One config line. The crew never changes."],
+      ["FiTrendingUp", TEAL, "Quality has a floor", "Guards run every time. The bad version cannot reach the client, even on a bad day."],
+      ["FiTool", VIOLET, "Cheap to improve", "Every fix is a rule or an agent, not a retrain. Ship it this afternoon."],
+      ["FiEye", AMBER, "You can explain it", "When it goes wrong you can point at the agent that did it. Not a black box."],
+      ["FiLock", ROSE, "It survives the model", "Models change every few months. The harness you build outlives all of them."],
+      ["FiCheckCircle", SKY, "It compounds", "Each rule makes every future build better, forever. That is the whole bet."],
+    ];
+    const cw = 3.72, ch = 1.95, gx = 0.28, gy = 0.28;
+    for (let i = 0; i < bens.length; i++) {
+      const col = i % 3, row = Math.floor(i / 3);
+      const x = MX + col * (cw + gx), y = 2.2 + row * (ch + gy);
+      card(s, x, y, cw, ch);
+      await chip(s, x + 0.6, y + 0.58, 0.56, bens[i][0], bens[i][1]);
+      s.addText(bens[i][2], { x: x + 1.05, y: y + 0.35, w: cw - 1.25, h: 0.45, fontFace: DISP, bold: true, fontSize: 15.5, color: INK, valign: "middle" });
+      s.addText(bens[i][3], { x: x + 0.35, y: y + 1.1, w: cw - 0.7, h: 0.75, fontFace: BODY, fontSize: 12, color: MUTED, lineSpacing: 16 });
+    }
+    s.addText("Everyone is chasing the next model. The harness is the part you own.",
+      { x: 2.5, y: 6.62, w: 8.33, h: 0.45, align: "center", fontFace: BODY, fontSize: 16, color: INDIGO });
+    s.addNotes("Why you should care as engineers. It is model agnostic, one config line moves it from a laptop model to a frontier API. Quality has a floor because the guards run every time. It is cheap to improve, every fix is a rule, not a retrain. You can explain it, when it goes wrong you point at the agent that did it. And it survives the model, models change every few months, the harness outlives them. Everyone is chasing the next model. The harness is the part you own.");
   }
 
   // =============================================== LIVE BUILD, WIRED UP
@@ -701,11 +826,11 @@ async function build() {
       s.addText(nums[i][2], { x: x + 0.35, y: y + 1.14, w: cw - 0.7, h: 0.38, fontFace: BODY, fontSize: 11.5, color: MUTED, lineSpacing: 14 });
     }
     s.addText([
-      { text: "A landing page comes out at about ", options: { color: MUTED } },
-      { text: "12 KB", options: { color: INDIGO, bold: true } },
-      { text: ": one HTML file, styles inlined, no framework, no build step, opens on any phone in the room.", options: { color: MUTED } },
+      { text: "A landing page comes out as ", options: { color: MUTED } },
+      { text: "one file", options: { color: INDIGO, bold: true } },
+      { text: ": about 24 KB of markup, plus the photograph embedded in it. No framework, no build step, no network.", options: { color: MUTED } },
     ], { x: MX, y: 6.5, w: W - 2 * MX, h: 0.6, align: "center", fontFace: BODY, fontSize: 15 });
-    s.addNotes("Use this to kill the 'yes but in the real world' objection before it is asked. Twelve hundred lines. Eight files. Seven agents that are one model with seven different system prompts. Nine endpoints. Eight dependencies. Zero cloud calls. You could read the whole thing on the train home, and the repo is in the QR at the end. Nothing here is a framework you have to buy into.");
+    s.addNotes("Use this to kill the 'yes but in the real world' objection before it is asked. Twelve hundred lines. Eight files. Eight agents that are one model with eight different system prompts. Nine endpoints. Eight dependencies. Zero cloud calls. You could read the whole thing on the train home, and the repo is in the QR at the end. Nothing here is a framework you have to buy into.");
   }
 
   // =============================================== THE HARNESS
@@ -740,13 +865,109 @@ async function build() {
     s.addNotes("This is the slide that makes the talk worth an hour of a senior engineer's evening. Say it plainly: 'Everything you just watched, the parallel starts, the handoffs, the loops back, the fact that it did not die when I unplugged the model, the fact that nothing rude reached the screen, the fact that the queue kept building while I talked. None of that came from the model. That is a harness, and it is ordinary engineering. Threads, queues, schedulers, validation, a human approval step. The model is a component. The harness is the product.'");
   }
 
+  // =============================================== WHY IT STOPPED LOOKING GENERATED
+  {
+    const s = slide();
+    eyebrow(s, "Lever four, the honest version", 0.62, ROSE);
+    s.addText([{ text: "Every page passed. ", options: { color: INK } }, { text: "Together they looked machine-made.", options: { color: ROSE } }],
+      { x: MX, y: 1.1, w: 11.4, h: 0.9, fontFace: DISP, bold: true, fontSize: 30 });
+    s.addText("A guard that reads one page at a time cannot see the thing a room notices first. Six ideas, six clean pages, and three of them opened with the same four words.",
+      { x: MX, y: 1.95, w: 9.2, h: 0.6, fontFace: BODY, fontSize: 15.5, color: MUTED });
+    const items = [
+      ["FiEyeOff", ROSE, "Absence is not quality", "Eight rules checked that tells were missing. Nothing required anything to be good, so the output was clean and forgettable."],
+      ["FiDroplet", VIOLET, "Colour, computed", "Nine of thirty-six palette values sat in the blue-violet band. Now the hue, the WCAG contrast and the accent separation are arithmetic."],
+      ["FiLayers", INDIGO, "One template is the tell", "Three hero compositions, eight palette families, five artworks. The layout is a decision per idea, not a constant."],
+      ["FiList", TEAL, "Remember the slot", "The ledger first remembered finished sentences, so two pages that shared a template looked like two values. A room sees the template."],
+      ["FiCpu", AMBER, "Record the model's pick too", "It only wrote down its own choices. The Illustrator answered 'waves' five times running and nothing stopped it."],
+      ["FiCode", SKY, "The schema is a lever", "A nested object failed every call on a 3b model. Five flat labelled lines land nearly every time. Same model, same prompt."],
+    ];
+    const cw = 3.72, ch = 1.95, gx = 0.28, gy = 0.26, x0 = MX, y0 = 2.75;
+    for (let i = 0; i < items.length; i++) {
+      const col = i % 3, row = Math.floor(i / 3);
+      const x = x0 + col * (cw + gx), y = y0 + row * (ch + gy);
+      card(s, x, y, cw, ch);
+      await chip(s, x + 0.6, y + 0.58, 0.54, items[i][0], items[i][1]);
+      s.addText(items[i][2], { x: x + 1.02, y: y + 0.32, w: cw - 1.25, h: 0.5, fontFace: DISP, bold: true, fontSize: 15, color: INK, valign: "middle" });
+      s.addText(items[i][3], { x: x + 0.35, y: y + 1.0, w: cw - 0.7, h: 0.85, fontFace: BODY, fontSize: 11.5, color: MUTED, lineSpacing: 15 });
+    }
+    s.addText([
+      { text: "The guard reads one page. ", options: { color: MUTED } },
+      { text: "The harness has to read the room.", options: { color: ROSE, bold: true } },
+    ], { x: 2, y: 6.85, w: W - 4, h: 0.5, align: "center", fontFace: BODY, fontSize: 15.5 });
+    s.addNotes("This is the slide where you admit something, and it lands better than any claim. Say: 'I built a guard with eight rules and every page passed it. Then I put six of them side by side and they were obviously made by a machine. Three opened with the same four words. My guard checked for the absence of tells. Nothing in it required the presence of quality. So I added colour rules that are arithmetic, three real layouts, and a memory that refuses a value the last few pages used. The colour rules failed two of my own palettes on the first run. And the memory had two bugs worth your time: it remembered finished sentences instead of templates, so the same sentence with a word swapped looked like variety. And it only recorded its own choices, so when the model picked waves five times in a row, nothing stopped it. Both of those are harness bugs, not model bugs.'");
+  }
+
+  // =============================================== SHOW THE PRODUCT
+  {
+    const s = slide();
+    eyebrow(s, "What the page actually shows", 0.62, TEAL);
+    s.addText([{ text: "Abstract art is decoration. ", options: { color: INK } }, { text: "Decoration is slop.", options: { color: TEAL } }],
+      { x: MX, y: 1.1, w: 11.4, h: 0.9, fontFace: DISP, bold: true, fontSize: 30 });
+    s.addText("The Illustrator used to pick rings, waves or a field of dots. Every page got a pattern. A real landing page shows the product, so now it draws one: nine interfaces, in SVG, offline.",
+      { x: MX, y: 1.95, w: 9.4, h: 0.6, fontFace: BODY, fontSize: 15.5, color: MUTED });
+    const items = [
+      ["FiCalendar", INDIGO, "calendar", "slots taken, one booked"],
+      ["FiClock", AMBER, "timer", "a dial and the time left"],
+      ["FiDollarSign", TEAL, "ledger", "contributions and a total"],
+      ["FiActivity", ROSE, "chart", "a threshold, and the breach"],
+      ["FiCheckSquare", VIOLET, "checklist", "ticked off, and whose turn"],
+      ["FiMapPin", SKY, "route", "stops, and a destination pin"],
+      ["FiMessageSquare", INDIGO, "inbox", "a thread and a reply box"],
+      ["FiShoppingBag", AMBER, "catalog", "product cards and a basket"],
+      ["FiGrid", TEAL, "dashboard", "when nothing else fits"],
+    ];
+    const cw = 3.72, ch = 1.2, gx = 0.28, gy = 0.22, x0 = MX, y0 = 2.72;
+    for (let i = 0; i < items.length; i++) {
+      const col = i % 3, row = Math.floor(i / 3);
+      const x = x0 + col * (cw + gx), y = y0 + row * (ch + gy);
+      card(s, x, y, cw, ch);
+      await chip(s, x + 0.55, y + 0.44, 0.46, items[i][0], items[i][1]);
+      s.addText(items[i][2], { x: x + 0.95, y: y + 0.2, w: cw - 1.15, h: 0.4, fontFace: MONO, bold: true, fontSize: 13, color: INK, valign: "middle" });
+      s.addText(items[i][3], { x: x + 0.95, y: y + 0.58, w: cw - 1.15, h: 0.42, fontFace: BODY, fontSize: 11.5, color: MUTED });
+    }
+    s.addText([
+      { text: "Asked to choose, Qwen said dashboard for a stokvel tracker. ", options: { color: MUTED } },
+      { text: "When the idea's own words are clear, the words win.", options: { color: TEAL, bold: true } },
+    ], { x: 1.4, y: 6.9, w: W - 2.8, h: 0.5, align: "center", fontFace: BODY, fontSize: 14.5 });
+    s.addNotes("The point of this slide is that 'let the model decide' is not automatically the right call. I asked Qwen which interface to draw and it said dashboard for a stokvel tracker and calendar for a coffee subscription. A twenty-line keyword scorer beats it, so the scorer decides when the idea's own words are decisive and the model only breaks ties. That is a harness decision, and it is the opposite of the reflex. Also worth saying: this one is deliberately NOT on the variety ledger. Two booking apps should both get a calendar. A mockup that does not match the product is much worse than one that repeats.");
+  }
+
+  // =============================================== THE CRITIC
+  {
+    const s = slide();
+    eyebrow(s, "The last edge in the web", 0.62, ROSE);
+    s.addText([{ text: "Seven agents wrote a field. ", options: { color: INK } }, { text: "Nobody read the page.", options: { color: ROSE } }],
+      { x: MX, y: 1.1, w: 11.4, h: 0.9, fontFace: DISP, bold: true, fontSize: 30 });
+    s.addText("Every worker owns one slice, so nothing in the crew ever saw the assembled result. That is how copy ships that is individually fine and collectively flat.",
+      { x: MX, y: 1.95, w: 9.2, h: 0.6, fontFace: BODY, fontSize: 15.5, color: MUTED });
+    const items = [
+      ["FiEye", ROSE, "It sees the whole page", "Headline, subhead, button and all three features, together, after everything else has run."],
+      ["FiEdit3", INDIGO, "It changes one line", "One field, one replacement. Ask for everything wrong and you get a list nobody acts on."],
+      ["FiShield", TEAL, "Its rewrite is not trusted", "The replacement clears the same checks as any other copy, and gets refused if it does not."],
+    ];
+    const cw = 3.72, ch = 2.1, gx = 0.28, x0 = MX, y0 = 2.85;
+    for (let i = 0; i < items.length; i++) {
+      const x = x0 + i * (cw + gx);
+      card(s, x, y0, cw, ch);
+      await chip(s, x + 0.6, y0 + 0.6, 0.54, items[i][0], items[i][1]);
+      s.addText(items[i][2], { x: x + 1.02, y: y0 + 0.34, w: cw - 1.25, h: 0.5, fontFace: DISP, bold: true, fontSize: 15, color: INK, valign: "middle" });
+      s.addText(items[i][3], { x: x + 0.35, y: y0 + 1.05, w: cw - 0.7, h: 0.95, fontFace: BODY, fontSize: 12, color: MUTED, lineSpacing: 16 });
+    }
+    s.addText([
+      { text: "It was asked for two labelled lines. It replies ", options: { color: MUTED } },
+      { text: "subhead: <rewrite>", options: { color: ROSE, bold: true, fontFace: MONO } },
+      { text: " instead. That is a usable answer, so the parser takes both.", options: { color: MUTED } },
+    ], { x: 1.2, y: 5.6, w: W - 2.4, h: 0.5, align: "center", fontFace: BODY, fontSize: 14.5 });
+    s.addNotes("Two things to land here. First, the structural point: a crew of specialists has a blind spot exactly where the specialisms meet, and the only fix is an agent whose input is the finished artefact. Second, the practical one: this agent does not get trusted just because it is the reviewer. Its rewrite goes through the same guard as everything else, and it does get refused. If you take one design idea home, take that one: the reviewer is not privileged.");
+  }
+
   // =============================================== THE REVEAL
   {
     const s = slide();
     eyebrow(s, "The reveal", 0.62, AMBER);
     s.addText([{ text: "You have been ", options: { color: INK } }, { text: "employing them", options: { color: INDIGO } }, { text: "\nthis whole time.", options: { color: INK } }],
       { x: MX, y: 1.6, w: 8.4, h: 2, fontFace: DISP, bold: true, fontSize: 40, lineSpacing: 50 });
-    s.addText("Every idea you sent went straight into the queue. While I was talking about prompts and levers and loops, seven agents on this laptop were quietly building a landing page for each one.",
+    s.addText("Every idea you sent went straight into the queue. While I was talking about prompts and levers and loops, eight agents on this laptop were quietly building a landing page for each one.",
       { x: MX, y: 3.85, w: 6.5, h: 1.6, fontFace: BODY, fontSize: 17, color: MUTED, lineSpacing: 27 });
     stat(s, MX, 5.6, "7", "agents per idea", INDIGO);
     stat(s, MX + 2.2, 5.6, "0", "cloud calls", INK);
@@ -759,7 +980,7 @@ async function build() {
       s.addText(steps[i][2], { x: x + 1.15, y, w: 2.7, h: 1.15, valign: "middle", fontFace: DISP, bold: true, fontSize: 17, color: INK });
       if (i < steps.length - 1) s.addShape("line", { x: x + 2.0, y: y + 1.15, w: 0, h: 0.35, line: { color: FAINT, width: 1.6, endArrowType: "triangle" } });
     }
-    s.addNotes("This is the moment the whole talk has been building to. Say it slowly. 'Remember the code at the start? Every idea you sent went into a queue. And while I was up here talking about prompts and levers and loops, the crew never stopped. Seven agents. One laptop. No internet. Let me show you what they made.' Then switch the projector to the gallery.");
+    s.addNotes("This is the moment the whole talk has been building to. Say it slowly. 'Remember the code at the start? Every idea you sent went into a queue. And while I was up here talking about prompts and levers and loops, the crew never stopped. Eight agents. One laptop. No internet. Let me show you what they made.' Then switch the projector to the gallery.");
   }
 
   // =============================================== THE WALL
@@ -779,11 +1000,11 @@ async function build() {
       s.addText(cols[i][0], { x: cx, y: 3.75, w: cw, h: 1.5, align: "center", valign: "middle", fontFace: DISP, bold: true, fontSize: 15, color: INK });
       cx += cw + gap;
     }
-    s.addText("every page invented from scratch, by a different run of the same seven agents",
+    s.addText("every page invented from scratch, by a different run of the same eight agents",
       { x: 2, y: 5.6, w: W - 4, h: 0.5, align: "center", fontFace: MONO, fontSize: 12, color: FAINT });
     s.addText("open  /gallery  on the projector",
       { x: 2, y: 6.4, w: W - 4, h: 0.5, align: "center", fontFace: MONO, fontSize: 13, color: INDIGO });
-    s.addNotes("Put the gallery on the projector and just let the room look for a few seconds. Do not talk over it. Then: 'Every one of these has its own name, its own artwork, its own colours, its own copy, and its own honest criticism. Same seven agents, run once per idea, on one laptop, while I was busy talking.' Point out one or two of the funnier ones by name. Let people find theirs.");
+    s.addNotes("Put the gallery on the projector and just let the room look for a few seconds. Do not talk over it. Then: 'Every one of these has its own name, its own artwork, its own colours, its own copy, and its own honest criticism. Same eight agents, run once per idea, on one laptop, while I was busy talking.' Point out one or two of the funnier ones by name. Let people find theirs.");
   }
 
   // =============================================== 24 CLOSE + QR
@@ -820,7 +1041,7 @@ async function build() {
   }
 
   await pres.writeFile({ fileName: "../One-Prompt-Many-Workers-Light.pptx" });
-  console.log("wrote light deck, 24 slides. LinkedIn:", LINKEDIN, "GitHub:", GITHUB);
+  console.log(`wrote light deck, ${count} slides. LinkedIn:`, LINKEDIN, "GitHub:", GITHUB);
 }
 
 build().catch(e => { console.error(e); process.exit(1); });

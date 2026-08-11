@@ -9,6 +9,8 @@
 // No frameworks, no external requests, no build step. One file you can open,
 // keep, or mail to yourself. The Java server produces the same shape.
 
+const { mockupSvg } = require("./mockup.js");
+
 const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]));
 
 // ---------------------------------------------------------------- icons
@@ -52,22 +54,76 @@ const svgIcon = (text, cls = "ic") =>
 // ---------------------------------------------------------------- artwork
 // The Illustrator's choice, drawn large and soft behind the hero rather than
 // squashed into a decorative strip.
-function artSvg(a) {
+function artSvg(a, layout) {
   if (!a) return "";
   const [c1, c2] = a.colors || ["#F5A524", "#38BDF8"];
   const sd = a.seed || 7, r = n => ((sd * (n + 3) * 9301 + 49297) % 233280) / 233280;
+  // strips get a wide canvas; the panel gets a tall one, so nothing is cropped to mush
+  const rail = layout === "editorial";
+  const strip = rail || layout === "band";
+  const W = strip ? 1200 : 860, H = rail ? 130 : strip ? 280 : 640;
+  const cx = W * 0.5, cy = H * 0.5;
   let inner;
-  if (a.kind === "rings")
-    inner = [0, 1, 2, 3, 4, 5].map(i => `<circle cx="${90 + i * 120}" cy="${300 + (r(i) - .5) * 180}" r="${60 + r(i) * 130}" fill="none" stroke="${i % 2 ? c2 : c1}" stroke-width="2"/>`).join("");
-  else if (a.kind === "waves")
-    inner = [0, 1, 2, 3, 4].map(i => `<path d="M-40 ${140 + i * 90} Q 200 ${60 + r(i) * 320} 440 ${180 + i * 80} T 900 ${150 + i * 85}" fill="none" stroke="${i % 2 ? c2 : c1}" stroke-width="2.5"/>`).join("");
-  else if (a.kind === "grid")
-    inner = Array.from({ length: 60 }, (_, i) => `<rect x="${(i % 10) * 86 + 20}" y="${Math.floor(i / 10) * 96 + 20}" width="52" height="62" rx="12" fill="${r(i) > .5 ? c1 : c2}" opacity="${.06 + r(i) * .3}"/>`).join("");
-  else if (a.kind === "burst")
-    inner = Array.from({ length: 30 }, (_, i) => `<line x1="430" y1="300" x2="${430 + Math.cos(i / 30 * 6.283) * (180 + r(i) * 420)}" y2="${300 + Math.sin(i / 30 * 6.283) * (150 + r(i) * 330)}" stroke="${i % 2 ? c1 : c2}" stroke-width="2"/>`).join("");
-  else
-    inner = Array.from({ length: 9 }, (_, i) => `<ellipse cx="${80 + i * 100}" cy="${280 + (r(i) - .5) * 260}" rx="${90 + r(i) * 120}" ry="${70 + r(i) * 90}" fill="${i % 2 ? c1 : c2}" opacity=".22"/>`).join("");
-  return `<svg class="field" viewBox="0 0 860 600" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${inner}</svg>`;
+
+  // A 9:1 rail cannot hold a centred composition: any focal mark floats in it as
+  // a speck. The rail gets its own horizontal rhythm that spans the full width.
+  if (rail) {
+    const bars = ["rings", "burst", "blobs"].includes(a.kind);
+    const n = bars ? 34 : 7;
+    const marks = Array.from({ length: n }, (_, i) => {
+      const t = i / n;
+      if (bars) {
+        const h = H * (.22 + .62 * Math.abs(Math.sin(t * 9 + sd)) * (.45 + r(i) * .55));
+        const hot = i % 7 === 3;
+        return `<rect x="${t * W}" y="${H - h}" width="${W / n * .42}" height="${h}" rx="${W / n * .18}" fill="${hot ? c1 : c2}" opacity="${hot ? .95 : .5}"/>`;
+      }
+      const y = H * .16 + i * (H * .11), len = W * (.34 + r(i) * .62);
+      return `<rect x="0" y="${y}" width="${len}" height="${i % 4 === 1 ? 5 : 2.5}" rx="2" fill="${i % 4 === 1 ? c1 : c2}" opacity="${i % 4 === 1 ? .9 : .45}"/>`;
+    }).join("");
+    return `<svg class="field" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${marks}</svg>`;
+  }
+
+  if (a.kind === "rings") {
+    // concentric, one solid anchor, weight growing outward: a composition, not scatter
+    const step = Math.min(W, H) / 9;
+    inner = `<circle cx="${cx}" cy="${cy}" r="${step * .85}" fill="${c1}" opacity=".9"/>`
+      + [1, 2, 3, 4, 5, 6].map(i =>
+          `<circle cx="${cx}" cy="${cy}" r="${step * (.85 + i * .95)}" fill="none" stroke="${i % 2 ? c2 : c1}" stroke-width="${1 + i * 1.6}" opacity="${.62 - i * .07}"/>`
+        ).join("");
+  } else if (a.kind === "waves") {
+    // parallel contour lines, evenly phased, thickening downward, with a solid base band
+    const n = 6;
+    inner = Array.from({ length: n }, (_, i) => {
+      const y = H * .2 + i * (H * .11), amp = H * .13 * (1 - i / (n * 1.7));
+      return `<path d="M0 ${y} C ${W * .28} ${y - amp} ${W * .52} ${y + amp} ${W} ${y - amp * .5}" fill="none" stroke="${i % 3 === 0 ? c1 : c2}" stroke-width="${2 + i * .9}" opacity="${.42 + i * .08}" stroke-linecap="round"/>`;
+    }).join("")
+      + `<path d="M0 ${H} L0 ${H * .86} C ${W * .3} ${H * .78} ${W * .6} ${H * .95} ${W} ${H * .82} L${W} ${H} Z" fill="${c1}" opacity=".18"/>`;
+  } else if (a.kind === "grid") {
+    // a real modular grid: hairline cells, four filled deliberately, one spanning two columns
+    const cols = strip ? 12 : 7, rows = rail ? 2 : strip ? 3 : 6;
+    const gx = W / (cols + 1), gy = H / (rows + 1), pad = gx * .16;
+    const hot = new Set([3, 11, 17, 26].map(k => k % (cols * rows)));
+    inner = Array.from({ length: cols * rows }, (_, i) => {
+      const x = (i % cols) * gx + gx * .5, y = Math.floor(i / cols) * gy + gy * .5;
+      return hot.has(i)
+        ? `<rect x="${x}" y="${y}" width="${gx - pad}" height="${gy - pad}" rx="${gx * .18}" fill="${i % 2 ? c1 : c2}" opacity=".92"/>`
+        : `<rect x="${x}" y="${y}" width="${gx - pad}" height="${gy - pad}" rx="${gx * .18}" fill="none" stroke="${c2}" stroke-width="1.6" opacity=".42"/>`;
+    }).join("");
+  } else if (a.kind === "burst") {
+    // rays on a fixed angular rhythm, length shaped by a sine so the silhouette reads as a form
+    const ax = W * .34, ay = H * .52, R = Math.min(W, H) * .62;
+    inner = Array.from({ length: 24 }, (_, i) => {
+      const t = i / 24 * 6.283, len = R * (.45 + .55 * Math.abs(Math.sin(t * 1.5)));
+      return `<line x1="${ax}" y1="${ay}" x2="${ax + Math.cos(t) * len}" y2="${ay + Math.sin(t) * len}" stroke="${i % 3 ? c2 : c1}" stroke-width="${i % 3 ? 2 : 5}" opacity="${i % 3 ? .4 : .8}" stroke-linecap="round"/>`;
+    }).join("")
+      + `<circle cx="${ax}" cy="${ay}" r="${R * .17}" fill="${c1}"/>`;
+  } else {
+    // stacked arcs at real scale: three shapes, not nine, each carrying weight
+    inner = `<path d="M0 ${H} A ${W * .55} ${H * .8} 0 0 1 ${W * .78} ${H * .1}" fill="none" stroke="${c1}" stroke-width="${H * .045}" opacity=".75" stroke-linecap="round"/>`
+      + `<path d="M${W * .22} ${H} A ${W * .5} ${H * .72} 0 0 1 ${W} ${H * .26}" fill="none" stroke="${c2}" stroke-width="${H * .03}" opacity=".55" stroke-linecap="round"/>`
+      + `<circle cx="${W * .74}" cy="${H * .3}" r="${H * .11}" fill="${c2}" opacity=".85"/>`;
+  }
+  return `<svg class="field" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${inner}</svg>`;
 }
 
 // A serif palette gets a serif display; the rest get a tight, heavy sans.
@@ -95,6 +151,7 @@ function renderPage(item) {
   const name = (R.product && R.product.name) || "This";
   const who = (item.name || "").trim();
   const tiers = R.pricing || [], faq = R.faq || [], f = fonts(p, c.headline);
+  const layout = R.layout || "split";
   const secs = item.ms ? (item.ms / 1000).toFixed(1) + "s" : "";
 
   // the crew's own account of what it made, in their words
@@ -156,13 +213,44 @@ function renderPage(item) {
   /* ---------- hero ---------- */
   /* the glow and the artwork are decoration: they must not widen the page */
   .hero{position:relative;overflow:hidden;padding:clamp(3.2rem,10vh,7rem) 0 clamp(2.6rem,7vh,5rem)}
-  .field{position:absolute;inset:-12% -22% auto auto;width:min(76vw,900px);height:min(72vh,640px);
-         opacity:.5;filter:blur(.4px);z-index:0;pointer-events:none;
-         mask-image:radial-gradient(70% 70% at 62% 42%,#000 30%,transparent 78%);
-         -webkit-mask-image:radial-gradient(70% 70% at 62% 42%,#000 30%,transparent 78%)}
-  .glow{position:absolute;top:-28%;right:-14%;width:62vw;height:62vw;max-width:820px;max-height:820px;
-        background:radial-gradient(circle,color-mix(in srgb,var(--primary) 26%,transparent) 0%,transparent 62%);
+  .hero .wrap{position:relative;z-index:1}
+  .hero-art{position:relative}
+  .field{display:block;width:100%;height:100%}
+
+  /* split: copy left, the product on the right */
+  .hero-split .wrap{display:grid;grid-template-columns:1.02fr .98fr;gap:clamp(2rem,5vw,4.5rem);align-items:center}
+  .hero-split .hero-art{border:1px solid var(--line);border-radius:20px;padding:clamp(.9rem,2vw,1.5rem);
+       background:linear-gradient(150deg,color-mix(in srgb,var(--primary) 12%,var(--surface)),var(--surface));
+       box-shadow:0 40px 80px -60px color-mix(in srgb,var(--primary) 70%,transparent)}
+  @media(max-width:820px){.hero-split .wrap{grid-template-columns:1fr}}
+
+  /* editorial: the sentence is the whole hero, the product gets its own band below */
+  .hero-editorial .hero-copy{max-width:min(100%,54rem)}
+  .hero-editorial h1{max-width:15ch}
+  .hero-editorial .lede{max-width:48ch}
+  .band.shot{padding-top:0}
+  .shot-frame{border:1px solid var(--line);border-radius:22px;padding:clamp(1rem,2.4vw,2rem);
+       background:linear-gradient(160deg,color-mix(in srgb,var(--accent) 12%,var(--surface)),var(--surface));
+       box-shadow:0 50px 90px -70px color-mix(in srgb,var(--accent) 80%,transparent)}
+  .shot-frame .field{max-height:min(46vh,420px);margin:0 auto}
+
+  /* the one place the page argues something, so it is a statement not a card */
+  .band.tension{background:var(--surface);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .band.tension p{font-size:clamp(1.35rem,2.9vw,2.05rem);line-height:1.32;letter-spacing:-.022em;
+       color:var(--ink);max-width:26ch;font-weight:600;margin:0}
+
+  /* band: the product above, the copy beneath it */
+  .hero-band .wrap{display:flex;flex-direction:column-reverse;gap:clamp(1.6rem,4vw,3rem)}
+  .hero-band .hero-art{border:1px solid var(--line);border-radius:20px;padding:clamp(.9rem,2vw,1.4rem);
+       background:linear-gradient(120deg,color-mix(in srgb,var(--accent) 14%,var(--surface)),var(--surface));
+       box-shadow:0 40px 80px -60px color-mix(in srgb,var(--accent) 80%,transparent)}
+  .hero-band .hero-art .field{max-height:min(34vh,300px);margin:0 auto}
+  .hero-band h1{max-width:20ch}
+
+  .glow{position:absolute;top:-30%;right:-16%;width:54vw;height:54vw;max-width:700px;max-height:700px;
+        background:radial-gradient(circle,color-mix(in srgb,var(--primary) 13%,transparent) 0%,transparent 64%);
         z-index:0;pointer-events:none}
+  .hero-editorial .glow,.hero-band .glow{display:none}
   .hero .wrap{position:relative;z-index:1}
   .eyebrow{display:inline-flex;align-items:center;gap:.55rem;font-family:var(--mono);
            font-size:.66rem;letter-spacing:.22em;text-transform:uppercase;color:var(--primary);
@@ -203,7 +291,8 @@ function renderPage(item) {
     .feature{border-top:0;padding:0;display:block}
     .feature .badge{margin-bottom:1rem}
     .feature:first-child{grid-row:span 2;align-self:stretch;
-      border-right:1px solid var(--line);padding-right:3rem}
+      border-right:1px solid var(--line);padding-right:3rem;
+      display:flex;flex-direction:column;justify-content:center}
     .feature:first-child h3{font-size:1.5rem}
     .feature:first-child p{font-size:1.05rem}
   }
@@ -297,18 +386,26 @@ function renderPage(item) {
   </div>
 </nav>
 
-<header class="hero">
+<header class="hero hero-${layout}">
   <div class="glow"></div>
-  ${artSvg(R.art)}
   <div class="wrap">
-    <span class="eyebrow">${esc(c.badge || "introducing")}</span>
-    <h1>${esc(c.headline || "")}</h1>
-    <p class="lede">${esc(c.subhead || "")}</p>
-    <div class="actions">
-      <a class="btn lg" href="#get">${esc(c.cta || "Get started")}</a>
+    <div class="hero-copy">
+      <span class="eyebrow">${esc(c.badge || "introducing")}</span>
+      <h1>${esc(c.headline || "")}</h1>
+      <p class="lede">${esc(c.subhead || "")}</p>
+      <div class="actions">
+        <a class="btn lg" href="#get">${esc(c.cta || "Get started")}</a>
+      </div>
     </div>
+    ${layout === "editorial" ? "" : `<div class="hero-art">${mockupSvg(R.art, p, layout)}</div>`}
   </div>
 </header>
+
+${layout === "editorial" ? `<section class="band shot">
+  <div class="wrap"><div class="shot-frame">${mockupSvg(R.art, p, layout)}</div></div>
+</section>` : ""}
+
+${R.insight ? `<section class="band tension"><div class="wrap"><p>${esc(R.insight)}</p></div></section>` : ""}
 
 <section class="band" id="what">
   <div class="wrap">

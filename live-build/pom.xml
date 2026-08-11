@@ -39,6 +39,12 @@
             <artifactId>langchain4j-ollama</artifactId>
             <version>${langchain4j.version}</version>
         </dependency>
+        <dependency>
+            <!-- NVIDIA / Groq / Cerebras all speak the OpenAI dialect -->
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-open-ai</artifactId>
+            <version>${langchain4j.version}</version>
+        </dependency>
 
         <!-- the presenter QR code -->
         <dependency>

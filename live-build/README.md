@@ -80,6 +80,13 @@ written down and checked mechanically in `TasteGuard.java`:
 | no scroll cues, no version stamps | devtool fixtures, not page content |
 | calls to action under 34 characters | longer ones wrap to two lines and read as broken |
 | no elevate / seamless / unleash / next-gen | what a model writes when it has nothing to say |
+| no saturated blue-violet in the palette | the colour every model drifts to; a room reads it as generated before it reads a word |
+| body text at 4.5:1 contrast or better | computed WCAG ratio, because nothing below that survives a projector |
+| primary and accent at least 24 degrees apart | two saturated hues on top of each other leave the page with no second voice |
+
+The last three are a different kind of rule. The first eight check for the
+**absence of a tell**. Those three require the **presence of quality**, which is
+the gap that made early output look competent and generated at the same time.
 
 Rules that can be repaired safely are repaired rather than merely reported: an
 em-dash becomes a middle dot, an over-long call to action is cut back to its
@@ -90,8 +97,197 @@ build receipt (`taste guard: passed`).
 failed five checks: an em-dash in the title, four eyebrow labels where two were
 allowed, three equal feature cards, a tagline under the hero button, and two
 decorative dots. Then it caught a 35-character call to action that would have
-wrapped at desktop, which no one had noticed by eye. That is the argument for
-guardrails in one example: the eye gets tired, the rule does not.
+wrapped at desktop, which no one had noticed by eye. When the colour rules were
+added they failed two of the palettes shipped in this repo. That is the argument
+for guardrails in one example: the eye gets tired, the rule does not.
+
+## The freshness ledger
+
+A guard that reads one page at a time cannot see the thing an audience notices
+first: that the last four pages were the same page. Six ideas went through the
+crew and three of them opened with **"Stop thinking about"**. Every page was
+individually fine. Together they were obviously machine-made.
+
+So the harness keeps a short memory per channel (palette, layout, artwork,
+headline, subhead, features, call to action) and refuses any value used recently.
+
+Two things this taught, both worth saying on stage:
+
+- **Key on the template, not the string.** The first version remembered finished
+  sentences, so "Stop thinking about braai" and "Stop thinking about stokvel"
+  looked like two different values. A room does not see strings. It sees one
+  sentence with a word swapped, so the ledger remembers the **slot**.
+- **Record what the model chose, not only what you chose.** The ledger originally
+  wrote down only its own picks. When the Illustrator answered "waves" the value
+  was accepted and never recorded, so it answered "waves" five times running and
+  nothing stopped it. `remember()` is now called on both paths.
+
+When the Copywriter repeats an opening anyway, the harness names the openings
+already used and sends the work back once. If it stays in the groove, the house
+draft is used instead.
+
+## What the model actually got wrong
+
+Everything below is real behaviour from qwen2.5:3b on this machine, and each one
+is a lever rather than a complaint:
+
+| What happened | The lever |
+|---|---|
+| a nested `Copy` object came back with an object where a string belonged, every single time | ask for **five flat labelled lines** instead; the same model lands it reliably. The schema is a control lever, same as the prompt |
+| asked for `FEATURES: title \| one sentence`, it wrote the label on its own line and listed three beneath | parse **loosely**: any line carrying the separator is a feature, wherever it sits |
+| it wrote the format spec back as content: a feature literally titled "Sentence" | refuse placeholder echoes at the parser |
+| a headline came back as "Midnight Geyser Guard, Neighbor Peace保証" | refuse anything outside Latin script before it reaches the page |
+| the background bundle pointed at `qwen2.5:1.5b`, which was never pulled | the failure was silent and every page quietly used house copy. The catch now prints the reason |
+
+That last one is the most useful slide in the deck. A swallowed exception did not
+crash anything. It just made the demo worse, invisibly, for an hour.
+
+## The product mockup
+
+The Illustrator used to draw abstract patterns: rings, waves, a field of dots.
+Every page got decoration, and decoration is its own kind of slop. A real landing
+page shows the product.
+
+There is no image model here and nothing may leave the laptop, so the product is
+drawn as SVG. Nine archetypes cover essentially any idea a room will type in:
+
+| archetype | what it draws | what triggers it |
+|---|---|---|
+| calendar | a week grid with slots taken and one booked | book, reserve, court, appointment |
+| timer | a countdown dial with time remaining | timer, countdown, braai, brew |
+| ledger | contribution rows with amounts and a total | money, stokvel, invoice, split |
+| chart | a line with a threshold and the breach marked | monitor, sensor, usage, leak |
+| checklist | tasks ticked off, and whose turn it is | chore, rota, todo, task |
+| route | a street grid, stops, and a destination pin | route, commute, lift club, delivery |
+| inbox | a thread of messages and a reply box | chat, group, message, neighbour |
+| catalog | product cards and a basket row | shop, menu, subscription, coffee |
+| dashboard | stat cards and a bar series | anything else |
+
+The classifier **scores** the idea against every archetype rather than taking the
+first keyword that matches. That is not a preference, it is a bug fix: "a braai
+timer that syncs with the load-shedding schedule" matched `schedule` first and
+drew a calendar for something that is plainly a timer.
+
+**The model proposes, the vocabulary decides.** Asked to choose, Qwen answered
+`dashboard` for a stokvel tracker and `calendar` for a coffee subscription. When
+the idea's own words are decisive the classifier wins; the model's word is only
+taken when nothing in the idea is clear. This one is also deliberately **not** on
+the freshness ledger: two booking apps should both get a calendar, because a
+mockup that does not match the product is far worse than one that repeats.
+
+## Who is working, and when
+
+The roster said which agent was busy. It could not show the thing the talk is
+actually about: that several are busy at the same moment, and that the one which
+finishes first picks up more work instead of waiting.
+
+The stage now carries a timeline. Every `startAgent` and `doneAgent` broadcasts a
+span stamped against the start of the run, and the strip draws them live:
+
+```
+namer       ▇
+copywriter  ▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇                    ▇▇▇▇▇▇
+designer    ▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇
+illustrator                        ▇
+pricer                              ▇
+builder                              ▇▇
+reviewer                               ▇▇▇▇▇▇▇▇▇▇▇▇▇▇
+skeptic                                ▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇
+critic                                                    ▇▇▇▇▇▇
+
+61.2s of work in 34.3s · 1.8x overlap · peak 3 at once
+```
+
+Three things it makes visible that a roster cannot:
+
+- **Three bars start together.** Namer, Copywriter and Designer are launched on
+  the same line, not one after another.
+- **The namer's bar is tiny and early.** It is the smallest job, so it lands
+  first and its output unblocks three others.
+- **The copywriter has two bars.** The second one is amber: that is the rewrite
+  after the Skeptic's critique. An agent that stopped and came back draws twice,
+  which is exactly what a feedback edge looks like from the outside.
+
+The number under it is the honest version of "nobody is idle": total agent time
+divided by wall clock. Not a claim, a measurement, computed in the browser from
+the same spans that draw the bars.
+
+## Which model, and why
+
+| | model | why |
+|---|---|---|
+| stage | **gemma3:12b** | it is the only one tested with design judgement |
+| background | **qwen2.5:3b** | those builds need speed, not judgement |
+
+That first row was measured, not assumed. Asked to choose a hero layout for a
+two-person design studio's manifesto site, qwen2.5:3b answered `band` — the same
+word it answered for a padel booking board, a coffee subscription and a stokvel
+tracker. gemma3:12b answered `editorial`, which is the right call, and gave three
+different answers across four ideas.
+
+Gemma also lands the flat copy schema first time and obeys the Critic's two-line
+format exactly, where Qwen replies `subhead: <rewrite>` instead.
+
+**The cost is real and worth saying on stage:** a build went from about 12
+seconds on qwen2.5:3b to 35 seconds on gemma3:12b. Better copy, better layout
+judgement, three times the wait. The timeline strip is what makes the wait worth
+watching.
+
+A cold 12B answers its first request in 8.4 seconds and every one after that in
+under one, so the model is loaded at startup rather than on the first idea of the
+demo. Swap either model without recompiling:
+
+```bash
+mvn spring-boot:run -Dspring-boot.run.arguments="--live.model=qwen2.5:7b --live.backgroundModel=qwen2.5:3b"
+```
+
+## The Critic
+
+Every other agent works on one field, so nothing in the crew ever read the
+finished page. That is how copy shipped that was individually fine and
+collectively flat.
+
+The Critic is the last edge in the web and the only one fed by the assembled
+result. It returns exactly one field and one replacement, which is the smallest
+useful unit of criticism: ask for everything wrong and you get a list nobody
+acts on. Its rewrite then clears the same checks as anything else the crew
+writes, and gets refused if it does not.
+
+It was asked for two labelled lines and it replies `subhead: <rewrite>` instead.
+That is a usable answer, so the parser takes both shapes. Same lesson as the
+flat copy schema: meet the model where it is.
+
+## What the model actually got wrong
+
+Everything below is real behaviour from qwen2.5:3b on this machine, and each one
+is a lever rather than a complaint:
+
+| What happened | The lever |
+|---|---|
+| a nested `Copy` object came back with an object where a string belonged, every single time | ask for **five flat labelled lines** instead; the same model lands it reliably. The schema is a control lever, same as the prompt |
+| asked for `FEATURES: title \| one sentence`, it wrote the label on its own line and listed three beneath | parse **loosely**: any line carrying the separator is a feature, wherever it sits |
+| it wrote the format spec back as content: features titled "Sentence", "Description" and "Title 1" | a placeholder title costs the title, not the feature. The body is real copy, so the title is built from it |
+| a headline came back as "Midnight Geyser Guard, Neighbor Peace保証" | refuse anything outside Latin script before it reaches the page |
+| a badge came back as "EasyBookPadel", which the page letter-spaces into a wall | split a run-together badge back into words |
+| the background bundle pointed at `qwen2.5:1.5b`, which was never pulled | the failure was silent and every page quietly used house copy. The catch now prints the reason |
+
+That last one is the most useful slide in the deck. A swallowed exception did not
+crash anything. It just made the demo worse, invisibly, for an hour.
+
+## The guard that broke the pages it was guarding
+
+Worth its own section, because it is the best argument in the talk for measuring
+rather than looking.
+
+The emoji repair rule collapsed whitespace before punctuation. It ran over the
+whole document, including `<style>`, which turned the selector `.hero .wrap` into
+`.hero.wrap` and the grid value `1.02fr .98fr` into `1.02fr.98fr`. Every
+descendant rule in the hero silently stopped applying. The pages still rendered,
+still passed all thirteen rules, and still looked plausible, so nobody caught it
+by eye. It took measuring a computed style to find.
+
+Repairs are now scoped: a guard that edits markup has to know which markup it is
+allowed to edit.
 
 ## Background builds and the closing gallery
 

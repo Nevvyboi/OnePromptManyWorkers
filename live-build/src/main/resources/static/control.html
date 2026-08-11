@@ -34,12 +34,18 @@
   .item button{background:var(--amber);color:#12100a;border:none;border-radius:9px;font-weight:700;padding:10px 16px;cursor:pointer;font-family:var(--sans);white-space:nowrap}
   .item button.hide{background:none;border:1px solid var(--line);color:var(--faint);font-weight:600;padding:10px 12px}
   .item button.hide:hover{border-color:var(--rose);color:var(--rose)}
+  .item button.del{background:none;border:1px solid var(--line);color:var(--faint);font-weight:600;padding:10px 12px}
+  .item button.del:hover{border-color:var(--rose);background:var(--rose);color:#12100a}
   .flag{display:inline-block;margin-left:.6rem;font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--rose);border:1px solid var(--rose);border-radius:11px;padding:.1rem .5rem;vertical-align:middle}
   .item button:disabled{background:#2a3040;color:var(--faint);cursor:default}
   .running{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)}
   .gate{margin-top:14px;width:100%;border:none;border-radius:10px;padding:13px;cursor:pointer;
         font-family:var(--sans);font-weight:700;font-size:.95rem;background:var(--teal);color:#06201c}
   .gate.closed{background:var(--rose);color:#2a0710}
+  .auto{margin-top:10px;width:100%;border:1px solid var(--amber);border-radius:10px;padding:12px;cursor:pointer;
+        font-family:var(--sans);font-weight:700;font-size:.92rem;background:none;color:var(--amber)}
+  .auto.on{background:var(--amber);color:#12100a}
+  .nextup{font-family:var(--mono);font-size:.72rem;color:var(--amber);margin-top:7px;min-height:1rem;opacity:.9}
   .demo{margin-top:14px;background:none;border:1px dashed var(--line);color:var(--muted);border-radius:10px;padding:11px;width:100%;cursor:pointer;font-family:var(--mono);font-size:.8rem}
   .status{font-family:var(--mono);font-size:.78rem;color:var(--teal);margin-top:12px;min-height:1.1rem}
 </style>
@@ -58,6 +64,8 @@
         </div>
       </div>
       <button class="gate" id="gate">Close submissions</button>
+      <button class="auto" id="auto">▶▶ Auto-advance: off</button>
+      <div class="nextup" id="nextup"></div>
       <button class="demo" id="demo">▶ Run a built-in demo idea</button>
       <div class="status" id="status"></div>
     </div>
@@ -79,7 +87,7 @@
 
   fetch("/api/info").then(r=>r.json()).then(d=>{
     document.getElementById("url").textContent = d.audienceUrl || (location.origin+"/");
-    document.getElementById("mode").textContent = d.mock ? "mock mode" : "qwen · local";
+    document.getElementById("mode").textContent = d.mock ? "mock mode" : ((d.model || "local model") + " · local");
   });
 
   function render(items){
@@ -92,9 +100,13 @@
       const flag = it.flagged ? '<span class="flag">check this one</span>' : "";
       el.innerHTML = `<div class="txt"><div class="t">${esc(it.text)}${flag}</div><div class="m">${it.name?esc(it.name)+" · ":""}#${it.id}${it.status==="done"?" · built":""}</div></div>`;
       const hide = document.createElement("button");
-      hide.textContent = "Hide"; hide.className = "hide"; hide.title = "Remove it from the list";
+      hide.textContent = "Hide"; hide.className = "hide"; hide.title = "Take it off the list, keep the build";
       hide.onclick = () => fetch("/api/hide/"+it.id+"?key="+encodeURIComponent(KEY), {method:"POST"});
       el.appendChild(hide);
+      const del = document.createElement("button");
+      del.textContent = "Delete"; del.className = "del"; del.title = "Remove it for good, from the gallery and disk";
+      del.onclick = () => { if (confirm("Delete #"+it.id+" for good? This also removes it from the gallery.")) fetch("/api/delete/"+it.id+"?key="+encodeURIComponent(KEY), {method:"POST"}); };
+      el.appendChild(del);
       const b = document.createElement("button");
       b.textContent = running===it.id ? "building…" : (it.status==="done"?"Run again":"Run");
       b.disabled = !!running;
@@ -127,13 +139,30 @@
   };
   fetch("/api/info").then(r=>r.json()).then(d=>{ if (d.open !== undefined){ gateOpen = d.open; paintGate(); } });
 
+  // auto-advance: the stage rolls through the queue by itself
+  let autoOn = false;
+  function paintAuto(next){
+    const b = document.getElementById("auto");
+    b.textContent = (autoOn ? "■ Auto-advance: on" : "▶▶ Auto-advance: off");
+    b.classList.toggle("on", autoOn);
+    const nu = document.getElementById("nextup");
+    nu.textContent = (autoOn && next) ? ("next up → " + next) : "";
+  }
+  document.getElementById("auto").onclick = async () => {
+    const next = !autoOn;
+    const r = await fetch("/api/auto?key=" + encodeURIComponent(KEY) + "&on=" + next, { method: "POST" });
+    if (r.ok){ autoOn = next; paintAuto(); }
+    else if (r.status === 403){ document.getElementById("status").textContent = "Presenter key missing."; }
+  };
+
   function refreshQueue(){ fetch("/api/queue?key="+encodeURIComponent(KEY)).then(r=>r.json()).then(d=>render(d.ideas)).catch(()=>{}); }
 
   const es = new EventSource("/api/events");
   es.addEventListener("queue", e => render(JSON.parse(e.data).ideas));
   es.addEventListener("gate", e => { gateOpen = JSON.parse(e.data).open; paintGate(); });
+  es.addEventListener("auto", e => { const d = JSON.parse(e.data); autoOn = d.on; paintAuto(d.next); });
   es.addEventListener("run-start", e => { running = JSON.parse(e.data).id; document.querySelectorAll(".item button").forEach(b=>b.disabled=true); });
-  es.addEventListener("run-done", e => { running=null; document.getElementById("status").textContent="Done. Pick the next one."; refreshQueue(); });
+  es.addEventListener("run-done", e => { running=null; document.getElementById("status").textContent = autoOn ? "Auto-advancing to the next…" : "Done. Pick the next one."; refreshQueue(); });
   refreshQueue();
 </script>
 </body>

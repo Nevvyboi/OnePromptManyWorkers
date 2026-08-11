@@ -62,6 +62,8 @@
   .card .acts a{flex:1;text-align:center;padding:.55rem .4rem;font-family:var(--mono);font-size:.63rem;
                 color:var(--muted);text-decoration:none;letter-spacing:.06em}
   .card .acts a:first-child{border-right:1px solid var(--line);color:var(--amber)}
+  .card .acts a.delx{border-left:1px solid var(--line);color:var(--rose)}
+  .card .acts a.delx:hover{background:var(--rose);color:#0B0D12}
   .card .acts a:hover{background:#151a24;color:var(--paper)}
   .card .sk b{font-family:var(--mono);font-size:.5rem;letter-spacing:.12em;text-transform:uppercase;display:block;color:var(--rose);margin-bottom:.15rem;opacity:.8}
 
@@ -85,6 +87,8 @@
   </footer>
 
 <script>
+  // A presenter key in the URL unlocks Delete on each card; the public reveal has none.
+  const KEY = new URLSearchParams(location.search).get("key") || "";
   const esc = s => (s||"").replace(/[&<>]/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[m]));
 
   // the illustrator's artwork, drawn from its {kind, seed, colors}
@@ -125,7 +129,12 @@
         <div class="fx">${(c.features||[]).slice(0,3).map(f=>`<div><b>${esc(f.title)}</b>${esc((f.body||"").slice(0,44))}…</div>`).join("")}</div>
       </div>
       ${R.skeptic ? `<div class="sk"><b>the skeptic said</b>${esc(R.skeptic)}</div>` : ""}
-      <div class="acts"><a href="/page/${item.id}" target="_blank">Open the page &#8599;</a><a href="/page/${item.id}?download=1">Download</a></div>`;
+      <div class="acts"><a href="/page/${item.id}" target="_blank">Open the page &#8599;</a><a href="/page/${item.id}?download=1">Download</a>${KEY?`<a href="#" class="delx" data-id="${esc(item.id)}">Delete</a>`:""}</div>`;
+    if (KEY) el.querySelector(".delx").onclick = (ev) => {
+      ev.preventDefault();
+      if (confirm("Delete this build for good? It leaves the gallery and disk."))
+        fetch("/api/delete/"+el.querySelector(".delx").dataset.id+"?key="+encodeURIComponent(KEY), {method:"POST"});
+    };
     return el;
   }
 
@@ -138,7 +147,7 @@
   }
 
   fetch("/api/gallery").then(r=>r.json()).then(render).catch(()=>{});
-  fetch("/api/info").then(r=>r.json()).then(d=>{ document.getElementById("mode").textContent = d.mock ? "mock mode" : "qwen · local"; });
+  fetch("/api/info").then(r=>r.json()).then(d=>{ document.getElementById("mode").textContent = d.mock ? "mock mode" : ((d.model || "local model") + " · local"); });
 
   const es = new EventSource("/api/events");
   es.addEventListener("gallery", e => render(JSON.parse(e.data)));

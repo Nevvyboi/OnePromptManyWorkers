@@ -78,15 +78,56 @@ const hash = s => {
   return h >>> 0;
 };
 
+// Palette families, deliberately none of them the AI blue-violet default.
+// Each is a named family so the harness can refuse to use the same one twice
+// in a row: a wall of twenty pages must not read as one template recoloured.
 const PALETTES = [
-  { bg:"#0f1220", surface:"#191d2e", ink:"#f4f5fb", muted:"#a6adc4", primary:"#7c9cff", accent:"#22d3ee", font:"-apple-system,Segoe UI,Roboto,sans-serif" },
-  { bg:"#fffaf3", surface:"#ffffff", ink:"#1c1a17", muted:"#7a736a", primary:"#e8622c", accent:"#f2b705", font:"Georgia,'Times New Roman',serif" },
-  { bg:"#0b1a14", surface:"#12241b", ink:"#eafff5", muted:"#8fb3a3", primary:"#34d399", accent:"#a3e635", font:"-apple-system,Segoe UI,Roboto,sans-serif" },
-  { bg:"#faf7ff", surface:"#ffffff", ink:"#1e1633", muted:"#6b6486", primary:"#7c3aed", accent:"#ec4899", font:"-apple-system,Segoe UI,Roboto,sans-serif" },
-  { bg:"#071018", surface:"#0f1c26", ink:"#eaf6ff", muted:"#93b2c6", primary:"#38bdf8", accent:"#f59e0b", font:"-apple-system,Segoe UI,Roboto,sans-serif" },
-  { bg:"#1a0f14", surface:"#2a171f", ink:"#fff0f4", muted:"#c69aa8", primary:"#fb7185", accent:"#fbbf24", font:"Georgia,'Times New Roman',serif" },
+  { family:"forest",     bg:"#0c1410", surface:"#14201a", ink:"#eef5ef", muted:"#93a89a", primary:"#5fa777", accent:"#d8a53d", font:"-apple-system,Segoe UI,Roboto,sans-serif" },
+  { family:"black-tan",  bg:"#111010", surface:"#1c1a18", ink:"#f4f1ec", muted:"#a49b8f", primary:"#c8925a", accent:"#5d7f8c", font:"-apple-system,Segoe UI,Roboto,sans-serif" },
+  { family:"cobalt",     bg:"#fbfaf7", surface:"#ffffff", ink:"#12171f", muted:"#5f6773", primary:"#1a4fd6", accent:"#0f766e", font:"-apple-system,Segoe UI,Roboto,sans-serif" },
+  { family:"terracotta", bg:"#f7f5f3", surface:"#ffffff", ink:"#1f1d1c", muted:"#6b6663", primary:"#b8532f", accent:"#3f5a68", font:"Georgia,'Times New Roman',serif" },
+  { family:"olive",      bg:"#16170f", surface:"#20221a", ink:"#f2f2e6", muted:"#9ba18a", primary:"#8a9a3f", accent:"#c8562f", font:"-apple-system,Segoe UI,Roboto,sans-serif" },
+  { family:"cold-lux",   bg:"#0e0f11", surface:"#191b1e", ink:"#f2f3f5", muted:"#9aa0a8", primary:"#c9ced6", accent:"#6fb0c4", font:"-apple-system,Segoe UI,Roboto,sans-serif" },
+  { family:"mono-pop",   bg:"#faf9f8", surface:"#ffffff", ink:"#141414", muted:"#666361", primary:"#e0472c", accent:"#141414", font:"-apple-system,Segoe UI,Roboto,sans-serif" },
+  { family:"ink-emerald",bg:"#0b0f0e", surface:"#141a19", ink:"#edf4f2", muted:"#8fa39e", primary:"#2fae7e", accent:"#e6c458", font:"Georgia,'Times New Roman',serif" },
 ];
-const ART_KINDS = ["blobs", "rings", "waves", "grid", "burst"];
+
+// The harness, not the model, guarantees variety. It refuses the family used
+// last, so consecutive pages never share a look.
+// --- Freshness ledger -------------------------------------------------
+// The taste guard reads one page in isolation, so it cannot see the thing an
+// audience notices first: that the last four pages were the same page. This
+// keeps a short memory per channel and refuses any value used recently. It is
+// the harness, not the model, that enforces variety.
+const RECENT = new Map();
+const MEMORY = { palette: 6, layout: 2, art: 3, name: 5, headline: 5, subhead: 4, cta: 4, features: 3, badge: 3 };
+const memKey = v => typeof v === "string" ? v : JSON.stringify(v).slice(0, 60);
+
+function fresh(list, seed, channel) {
+  const seen = RECENT.get(channel) || [];
+  const pool = list.filter(x => !seen.includes(memKey(x)));
+  const from = pool.length ? pool : list;
+  const chosen = from[Math.abs(hash(seed)) % from.length];
+  seen.push(memKey(chosen));
+  const depth = Math.min(MEMORY[channel] || 3, list.length - 1);
+  while (seen.length > depth) seen.shift();
+  RECENT.set(channel, seen);
+  return chosen;
+}
+
+// Picks a template slot rather than a rendered string. Keying on the finished
+// sentence was a real bug: three pages opened "Stop thinking about" and the
+// ledger saw three different strings. The room sees the template, not the string.
+function slot(options, seed, channel) {
+  const idx = options.map((_, i) => i);
+  return options[fresh(idx, seed, channel)];
+}
+
+const pickPalette = idea => fresh(PALETTES, idea + "pal", "palette");
+const LAYOUTS = ["split", "editorial", "band"];
+const pickLayout = idea => fresh(LAYOUTS, idea + "lay", "layout");
+
+const { ARCHETYPES, archetypeFor } = require("./mockup.js");
 
 const words = idea => idea.trim().replace(/[.\s]+$/, "").replace(/^an?\s+/i, "");
 const Cap = s => s.charAt(0).toUpperCase() + s.slice(1);
@@ -96,7 +137,9 @@ const Cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 // Splicing that into every slot produces garbage, so pull out the short noun
 // phrase at the front and write around that plus the product name instead.
 const STOP = new Set(["that","which","who","when","where","so","and","but","for","to","with",
-                      "if","because","while","after","before","from","by","of","in","on","at"]);
+                      "if","because","while","after","before","from","by","of","in","on","at",
+  "i","you","we","they","he","she","it","my","our","your","their","me","us",
+  "can","could","would","should","will","shall","may","might","do","does","did"]);
 function subject(idea) {
   const w = words(idea).split(/\s+/);
   const out = [];
@@ -122,33 +165,37 @@ function makeName(idea) {
   const a = (w[0] || "Nova").replace(/[^a-zA-Z]/g, "");
   const b = (w[1] || w[0] || "Kit").replace(/[^a-zA-Z]/g, "");
   const forms = [
-    Cap(a) + "ly", Cap(a) + "r", Cap(a) + "Kit", Cap(b) + "Hub",
-    Cap(a.slice(0, 4)) + Cap(b.slice(0, 4)), Cap(a) + "Wise",
+    Cap(a) + Cap(b), Cap(a) + " Works", Cap(a) + " Lane", Cap(b) + " Yard",
+    Cap(a) + Cap(b.slice(0, 1)) + b.slice(1, 3), Cap(a) + " Co", Cap(b) + " Club", "The " + Cap(a),
   ];
-  return { name: pick(forms, idea), tagline: "for everyone who keeps forgetting" };
+  return { name: fresh(forms, idea, "name"), tagline: "for everyone who keeps forgetting" };
 }
 
 // --- Copywriter ---
 function makeCopy(idea, productName) {
   const s = subject(idea), t = topic(idea), P = productName || Cap(s);
   return {
-    badge: pick(["introducing", "new", "meet", "now live"], idea),
-    headline: pick([
+    badge: slot(["introducing", "new", "meet", "now live"], idea, "badge"),
+    headline: slot([
       `${Cap(s)}, finally done properly.`,
       `${P}. The ${s} that remembers for you.`,
-      `Never think about ${t} again.`,
+      `Never think about your ${t} again.`,
       `${Cap(s)} that actually works.`,
-      `${P} handles the ${t}. You do not.`,
+      `${P} handles your ${t}. You do not.`,
       `The ${s} you will actually keep using.`,
-    ], idea + "h"),
-    subhead: pick([
-      `${P} watches the ${t} so you can get on with your day. Set it up once, in under a minute.`,
+    ], idea + "h", "headline"),
+    subhead: slot([
+      `${P} watches your ${t} so you can get on with your day. Set it up once, in under a minute.`,
       `A ${s} with one job, done quietly in the background. No dashboards, no nagging, no setup wizard.`,
-      `Everything you need for ${t}, and nothing you don't. It works even when you forget it exists.`,
-      `Built for the days you forget. ${P} keeps an eye on ${t} and only speaks up when it matters.`,
-    ], idea + "sh"),
-    cta: pick(["Get early access", "Start free", "Join the waitlist", "Try it now"], idea + "c"),
-    features: pick([
+      `Everything you need for your ${t}, and nothing you don't. It works even when you forget it exists.`,
+      `Built for the days you forget. ${P} keeps an eye on your ${t} and only speaks up when it matters.`,
+      `One screen, one job. ${P} deals with your ${t} and stays out of the way the rest of the time.`,
+      `The ${s} you set up in a minute and then stop thinking about. That is the whole pitch.`,
+      `No accounts to chase, no group chat. ${P} handles your ${t} and tells you only what changed.`,
+    ], idea + "sh", "subhead"),
+    cta: slot(["Get early access", "Start free", "Join the waitlist", "Try it now",
+                "See how it works", "Set it up now"], idea + "c", "cta"),
+    features: slot([
       [ { title: "Effortless", body: `${P} handles the ${t} in the background. You get on with your day.` },
         { title: "Ready in seconds", body: "Open it and you are already going. No manual, no setup wizard." },
         { title: "Private by default", body: "Runs close to home. Your data stays where it belongs." } ],
@@ -161,13 +208,13 @@ function makeCopy(idea, productName) {
       [ { title: "No nagging", body: "It tells you once, at the right moment, and then leaves you alone." },
         { title: "Honest numbers", body: `See exactly what ${t} is costing you, in plain language.` },
         { title: "Yours to keep", body: "Export everything, any time. No hostage taking." } ],
-    ], idea + "f"),
+    ], idea + "f", "features"),
   };
 }
 
 // --- Illustrator: picks an abstract hero artwork the browser draws as SVG ---
 function makeArt(idea, palette) {
-  return { kind: pick(ART_KINDS, idea + "a"), seed: Math.abs(hash(idea)) % 997,
+  return { kind: archetypeFor(idea, null), seed: Math.abs(hash(idea)) % 997,
            colors: [palette.primary, palette.accent] };
 }
 
@@ -177,11 +224,11 @@ function makeReview(idea) {
   return {
     verdict: "solid, one thing to sharpen",
     field: "cta",
-    value: pick([
+    value: slot([
       "Try it in 30 seconds", "Get it working today", "See it in action",
       "Set it up now", "Take it for a spin",
       "Start free, no card", "Let it remember", "Give it one job",
-    ], idea + "r"),
+    ], idea + "r", "cta"),
     note: "the call to action was generic",
   };
 }
@@ -229,28 +276,28 @@ const skepticNote = idea => {
 function reviseHeadline(idea, productName) {
   const s = subject(idea), t = topic(idea), first = t.split(/\s+/)[0] || "it";
   const P = productName || Cap(s);
-  return pick([
+  return slot([
     `${Cap(s)}. Zero effort, zero guilt.`,
-    `${P} remembers the ${t}, so you don't have to.`,
+    `${P} remembers your ${t}, so you don't have to.`,
     `${Cap(s)}, minus the guesswork.`,
-    `The lazy way to handle ${t}. On purpose.`,
+    `The lazy way to handle your ${t}. On purpose.`,
     `Set it once. ${P} takes it from there.`,
     `${P}. Because you will forget again.`,
-    `Stop thinking about ${first}. ${P} has it.`,
+    `Stop thinking about your ${first}. ${P} has it.`,
     `${Cap(s)}, without the admin.`,
-  ], idea + "rv");
+  ], idea + "rv", "headline");
 }
 
 // the whole crew's output for one idea, with no stage events (used for the
 // quiet background builds that happen while the talk is going on)
 function buildResult(idea) {
   const named = makeName(idea);
-  const palette = PALETTES[Math.abs(hash(idea)) % PALETTES.length];
+  const palette = pickPalette(idea);
   const copy = makeCopy(idea, named.name);
   const review = makeReview(idea);
   copy.cta = review.value;
   copy.headline = reviseHeadline(idea, named.name);
-  return { product: named, palette, copy, art: makeArt(idea, palette), review,
+  return { product: named, palette, copy, art: makeArt(idea, palette), review, layout: pickLayout(idea),
            pricing: makePricing(idea, named.name), faq: makeFaq(idea), skeptic: skepticNote(idea) };
 }
 
@@ -310,7 +357,7 @@ async function runCrew(idea, name) {
   broadcast("agent-state", { key: "namer", state: "done" });
 
   // the designer lands next and helps too
-  const palette = PALETTES[Math.abs(hash(idea.text)) % PALETTES.length];
+  const palette = pickPalette(idea.text);
   broadcast("worker-done", { key: "designer", payload: palette });
   doneAgent("designer"); broadcast("agent-state", { key: "designer", state: "assisting", note: "hands the illustrator its colours" });
   broadcast("flow", { from: "designer", to: "copywriter", what: "tone hint" });
