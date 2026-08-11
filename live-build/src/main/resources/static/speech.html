@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>One Prompt, Many Workers — speaker script</title>
+<title>One Prompt, Many Workers, speaker script</title>
 <style>
   :root{
     --bg:#0C0D10; --card:#131519; --line:#20242C; --ink:#ECEEF3; --dim:#9AA0AC;
@@ -83,7 +83,7 @@
     <div class="onscreen"><b>ON SCREEN:</b> One Prompt. Many Workers. Building Multi-Agent AI Systems in Java. The fan of one dot becoming five.</div>
     <div class="say">
       <p><span class="cue">walk on, let the title sit</span> Good evening. I'm Nevin. <span class="cue beat">beat</span></p>
-      <p>That little fan on the screen, one dot becoming five, that is the entire talk. One thing becoming a team. And tonight we are going to build that for real. In Java. On this laptop. With a model that never once phones home.</p>
+      <p>See that little fan up there, one dot turning into five? That's basically the whole talk. One thing becoming a team. And we're going to actually build it tonight. In Java. On this laptop. With a model that never phones home once.</p>
       <p>Thank you to BBD for the room and the pizza. Let's go.</p>
     </div>
   </section>
@@ -92,9 +92,9 @@
     <div class="shead"><span class="num">02</span><span class="eye">The promise</span><span class="time">1:08 · ~1.1 min</span></div>
     <div class="onscreen"><b>ON SCREEN:</b> One sentence in. A team of workers out.</div>
     <div class="say">
-      <p>Last week I typed one sentence into my own laptop. Fourteen words. And that laptop quietly assembled a team of five workers, split the job between them, and handed me back a finished thing.</p>
+      <p>So last week I typed one sentence into my laptop. Fourteen words. And it quietly went off, put together a team of five workers, split the job between them, and handed me back a finished thing.</p>
       <p>No cloud. No API bill. No internet at all. <span class="cue beat">let it land</span></p>
-      <p>And my honest first reaction was: that's magic. My second reaction, about a minute later, was: that's a little bit horrifying. Because when I looked at how much code it took, <em>it was almost nothing.</em> That gap, between how powerful it feels and how little it takes, is what I want to walk you through tonight.</p>
+      <p>My first reaction was, honestly, that's magic. My second reaction, about a minute later, was, hang on, that's slightly terrifying. Because when I looked at how much code it took, <em>it was almost nothing.</em> That gap, between how powerful it feels and how little it takes, is what I want to walk you through tonight.</p>
     </div>
   </section>
   <!-- 3 -->
@@ -102,13 +102,13 @@
     <div class="shead"><span class="num">03</span><span class="eye">Scan to join</span><span class="time">2:16 · ~1.1 min</span></div>
     <div class="onscreen"><b>ON SCREEN:</b> Big QR code on screen.</div>
       <div class="say">
-        <p>Before I say anything else, get your phones out. <span class="cue">hold up your own phone</span></p><p>Join the hotspot, scan that code, and type <em>one line</em> — any product idea, however daft. A padel booking app. A bakery. Whatever.</p><p>Here is the important part: the moment you hit send, a crew of agents on this laptop starts building a real landing page for it. Not a mockup. A real page. And they keep working the whole time I'm talking. <span class="cue beat">give them 20 seconds</span></p>
+        <p>Before I say anything else, get your phones out. <span class="cue">hold up your own phone</span></p><p>Join the hotspot, scan that code, and type <em>one line</em>, any product idea, however daft. A padel booking app. A bakery. Whatever.</p><p>Here is the important part: the moment you hit send, a crew of agents on this laptop starts building a real landing page for it. Not a mockup. A real page. And they keep working the whole time I'm talking. <span class="cue beat">give them 20 seconds</span></p>
       </div>
   </section>
   <!-- 4 -->
   <section class="slide" id="s4">
     <div class="shead"><span class="num">04</span><span class="eye">Where we're going</span><span class="time">3:24 · ~1.1 min</span></div>
-    <div class="onscreen"><b>ON SCREEN:</b> Roadmap — prompt → agent → infrastructure → control → the crew, live.</div>
+    <div class="onscreen"><b>ON SCREEN:</b> Roadmap, prompt → agent → infrastructure → control → the crew, live.</div>
     <div class="say">
       <p>Quick map so you know where we're headed. We start at the smallest thing, a prompt. We turn it into an agent. We build the infrastructure to run one properly. Then we open up the control panel that almost nobody talks about. And then we point one prompt at a whole crew and run it live.</p>
       <p>The demo is already running behind me. Everything from here is me earning that payoff.</p>
@@ -117,7 +117,7 @@
   <!-- 5 -->
   <section class="slide" id="s5">
     <div class="shead"><span class="num">05</span><span class="eye">Act divider</span><span class="time">4:32 · ~1.1 min</span></div>
-    <div class="onscreen"><b>ON SCREEN:</b> Act divider — The Prompt.</div>
+    <div class="onscreen"><b>ON SCREEN:</b> Act divider, The Prompt.</div>
       <div class="say">
         <p>Right. Rung one. <span class="cue beat">beat</span></p><p>The prompt. And almost everyone misunderstands what it actually is.</p>
       </div>
@@ -127,25 +127,25 @@
     <div class="shead"><span class="num">06</span><span class="eye">The atom</span><span class="time">5:40 · ~1.1 min</span></div>
     <div class="onscreen"><b>ON SCREEN:</b> A model is a function. text in → text out.</div>
     <div class="say">
-      <p>Strip away all the marketing and a language model is a function. Text goes in, text comes out. That's it.</p>
-      <p>It has no memory, every call starts from a blank page. It has no hands, it cannot do anything in the world. And it cannot check its own work. Ask it the same question twice and you can get two different answers, because underneath, <em>it is a very, very good guesser.</em> A brilliant guesser. But a guesser.</p>
+      <p>Okay, so. Strip the marketing off and a language model is just a function. Text goes in, text comes out. That's it.</p>
+      <p>It's got no memory, so every call starts from a blank page. It's got no hands, so it can't actually do anything. And it can't check its own work. Ask it the same thing twice and you can get two different answers, because underneath, <em>it’s a very, very good guesser.</em> A brilliant guesser. But a guesser.</p>
       <p>And a prompt? A prompt is just you calling that function. That's the whole atom. Everything else tonight is what we wrap around it.</p>
     </div>
   </section>
   <!-- 7 -->
   <section class="slide" id="s7">
     <div class="shead"><span class="num">07</span><span class="eye">The ceiling</span><span class="time">6:48 · ~1.1 min</span></div>
-    <div class="onscreen"><b>ON SCREEN:</b> Three walls — no memory, no hands, no proof.</div>
+    <div class="onscreen"><b>ON SCREEN:</b> Three walls, no memory, no hands, no proof.</div>
     <div class="say">
       <p>So a raw prompt hits three walls, fast.</p>
-      <p>Wall one, no memory. Every call from zero. Wall two, no hands. It can write you a beautiful email but it cannot send it. Wall three, no proof. It is exactly as confident when it's right as when it's completely inventing something.</p>
+      <p>Wall one, no memory. Every call from zero. Wall two, no hands. It can write you a beautiful email but it can’t send it. Wall three, no proof. It’s exactly as confident when it's right as when it's completely inventing something.</p>
       <p>Picture a brilliant intern who forgets your name every time you turn around, and occasionally invents a co-worker who doesn't exist. <span class="cue beat">beat</span> That's a raw model. Useful, and not something you'd put in front of a client yet.</p>
     </div>
   </section>
   <!-- 8 -->
   <section class="slide" id="s8">
     <div class="shead"><span class="num">08</span><span class="eye">Act divider</span><span class="time">7:56 · ~1.1 min</span></div>
-    <div class="onscreen"><b>ON SCREEN:</b> Act divider — The Agent.</div>
+    <div class="onscreen"><b>ON SCREEN:</b> Act divider, The Agent.</div>
       <div class="say">
         <p>So we give that function a memory, some hands, and a loop.</p><p>And it stops being a chatbot. It becomes an agent.</p>
       </div>
@@ -162,17 +162,17 @@
   <!-- 10 -->
   <section class="slide" id="s10">
     <div class="shead"><span class="num">10</span><span class="eye">The whole trick</span><span class="time">10:12 · ~1.1 min</span></div>
-    <div class="onscreen"><b>ON SCREEN:</b> The loop — reason → act → observe → done? → repeat.</div>
+    <div class="onscreen"><b>ON SCREEN:</b> The loop, reason → act → observe → done? → repeat.</div>
     <div class="say">
-      <p>This is the most important idea in the talk, so let me slow down.</p>
-      <p>The agent reasons about what to do. It acts, by calling a tool. It observes what came back. And then it asks itself one question: am I done? If yes, it stops. If no, it goes around again. Reason, act, observe, repeat.</p>
-      <p>That little circle is the entire difference between <em>a model that talks</em> and <em>a system that finishes.</em> A chatbot answers. An agent keeps going until the job is actually done.</p>
+      <p>Right, if you take one thing home tonight, make it this one.</p>
+      <p>The agent reasons about what to do. It acts, by calling a tool. It observes what came back. And then it asks itself one question: am I done? If yes, it stops. If no, it goes around again. Reason, act, observe, go again.</p>
+      <p>That little circle is the difference between <em>a model that talks</em> and <em>a system that finishes.</em> A chatbot answers. An agent keeps going until the job is actually done.</p>
     </div>
   </section>
   <!-- 11 -->
   <section class="slide" id="s11">
     <div class="shead"><span class="num">11</span><span class="eye">Act divider</span><span class="time">11:21 · ~1.1 min</span></div>
-    <div class="onscreen"><b>ON SCREEN:</b> Act divider — The Infrastructure.</div>
+    <div class="onscreen"><b>ON SCREEN:</b> Act divider, The Infrastructure.</div>
       <div class="say">
         <p>A loop on a slide is easy. A loop you can run at BBD, that a client trusts with real money, needs a stack underneath it.</p><p>Let's build one.</p>
       </div>
@@ -180,7 +180,7 @@
   <!-- 12 -->
   <section class="slide" id="s12">
     <div class="shead"><span class="num">12</span><span class="eye">The anatomy</span><span class="time">12:29 · ~1.1 min</span></div>
-    <div class="onscreen"><b>ON SCREEN:</b> Five layers — runtime, orchestration, tools, memory, structured output.</div>
+    <div class="onscreen"><b>ON SCREEN:</b> Five layers, runtime, orchestration, tools, memory, structured output.</div>
     <div class="say">
       <p>Five layers. Bottom to top.</p>
       <p>The runtime, that's Ollama running Qwen, the model itself, on the machine. Orchestration, that's LangChain4j or Spring AI, the thing that runs the loop. Tools, the hands. Memory, the notebook. And at the top, structured output, which means the answer comes back to us as <em>data, not a paragraph.</em></p>
@@ -192,9 +192,9 @@
     <div class="shead"><span class="num">13</span><span class="eye">The obvious question</span><span class="time">13:37 · ~1.1 min</span></div>
     <div class="onscreen"><b>ON SCREEN:</b> Why Java? Because your systems of record already run on the JVM.</div>
     <div class="say">
-      <p>Now the question half of you are already thinking. Why Java? Every AI tutorial online is Python.</p>
-      <p>And Python is lovely, genuinely. But here's the thing. <em>Your systems of record run on the JVM.</em> Your transactions, your security, your customer data, all of it. You are not going to rewrite any of that in Python to sprinkle some AI on top.</p>
-      <p>LangChain4j and Spring AI let you put the AI right next to the business logic. Behind Spring Security. Inside your transactions. Next to your data. That is not a compromise. For an enterprise, that is the whole point.</p>
+      <p>Now the question half of you’re already thinking. Why Java? Every AI tutorial online is Python.</p>
+      <p>And Python is lovely, genuinely. But here's the thing. <em>Your systems of record run on the JVM.</em> Your transactions, your security, your customer data, all of it. You’re not going to rewrite any of that in Python to sprinkle some AI on top.</p>
+      <p>LangChain4j and Spring AI let you put the AI right next to the business logic. Behind Spring Security. Inside your transactions. Next to your data. That’s not a compromise. For an enterprise, that’s the whole point.</p>
     </div>
   </section>
   <!-- 14 -->
@@ -203,24 +203,24 @@
     <div class="onscreen"><b>ON SCREEN:</b> Qwen via Ollama. Local. Free. Private.</div>
     <div class="say">
       <p>Tonight's model is Qwen, running through Ollama, entirely on this laptop.</p>
-      <p>Three things fall out of that, and they matter. One, the client's data never leaves the building. Two, there is no token bill that grows every time you succeed. And three, <span class="cue">tap laptop</span> it works on a plane.</p>
+      <p>Three things fall out of that, and they matter. One, the client's data never leaves the building. Two, there’s no token bill that grows every time you succeed. And three, <span class="cue">tap laptop</span> it works on a plane.</p>
       <p>For a bank, for a hospital, for government, "it never leaves the building" isn't a feature. It's the entire conversation. It's the difference between a yes and a no.</p>
     </div>
   </section>
   <!-- 15 -->
   <section class="slide" id="s15">
     <div class="shead"><span class="num">15</span><span class="eye">Act divider</span><span class="time">15:53 · ~1.1 min</span></div>
-    <div class="onscreen"><b>ON SCREEN:</b> Act divider — Control Beyond the Prompt.</div>
+    <div class="onscreen"><b>ON SCREEN:</b> Act divider, Control Beyond the Prompt.</div>
       <div class="say">
-        <p>This is the heart of the talk. <span class="cue beat">slow down</span></p><p>Most people think the prompt is the steering wheel. It is one control out of six. Here is the whole cockpit.</p>
+        <p>This is the heart of the talk. <span class="cue beat">slow down</span></p><p>Most people think the prompt is the steering wheel. It’s one control out of six. Here is the whole cockpit.</p>
       </div>
   </section>
   <!-- 16 -->
   <section class="slide" id="s16">
     <div class="shead"><span class="num">16</span><span class="eye">The cockpit</span><span class="time">17:01 · ~1.1 min</span></div>
-    <div class="onscreen"><b>ON SCREEN:</b> Six levers — prompt, tools, schema, guardrails, memory, orchestration.</div>
+    <div class="onscreen"><b>ON SCREEN:</b> Six levers, prompt, tools, schema, guardrails, memory, orchestration.</div>
     <div class="say">
-      <p>Six levers. Here they are.</p>
+      <p>Six levers. Quick tour.</p>
       <p>The <strong>prompt</strong> says what you want. <strong>Tools</strong> decide what it's even allowed to touch. <strong>Schema</strong> decides the shape of the answer. <strong>Guardrails</strong> reject bad output before anyone sees it. <strong>Memory</strong> decides what it knows and what it forgets. And <strong>orchestration</strong> decides who talks to whom.</p>
       <p>And here's the counter-intuitive bit that took me a while to really get. When you want to change an agent's behaviour, most of the time <em>you barely touch the prompt.</em> You change the constraints around it.</p>
     </div>
@@ -238,7 +238,7 @@
   <!-- 18 -->
   <section class="slide" id="s18">
     <div class="shead"><span class="num">18</span><span class="eye">Act divider</span><span class="time">19:17 · ~1.1 min</span></div>
-    <div class="onscreen"><b>ON SCREEN:</b> Act divider — One Prompt. Many Workers.</div>
+    <div class="onscreen"><b>ON SCREEN:</b> Act divider, One Prompt. Many Workers.</div>
       <div class="say">
         <p>Lever six, orchestration, is the fun one. <span class="cue">lift the energy</span></p><p>Instead of one agent doing everything, we point a single prompt at a whole crew. One becomes many.</p>
       </div>
@@ -246,11 +246,11 @@
   <!-- 19 -->
   <section class="slide" id="s19">
     <div class="shead"><span class="num">19</span><span class="eye">The pattern</span><span class="time">20:25 · ~1.1 min</span></div>
-    <div class="onscreen"><b>ON SCREEN:</b> The spider net — agents feeding agents, with a loop back.</div>
+    <div class="onscreen"><b>ON SCREEN:</b> The spider net, agents feeding agents, with a loop back.</div>
     <div class="say">
-      <p>This is the shape of tonight's crew, and notice it is <em>not</em> a straight line.</p>
+      <p>This is the shape of tonight's crew, and notice it’s <em>not</em> a straight line.</p>
       <p>The copywriter and the designer start at the same time. The designer finishes first, and instead of sitting there idle, it comes back and helps: it hands the copywriter a tone hint, and it tells the illustrator which colour should lead. Both of them feed the builder. The builder hands the finished page to a skeptic.</p>
-      <p>And then the important edge, the dashed one. <span class="cue">trace the loop back</span> The skeptic's critique loops all the way back to the copywriter, who rewrites the headline. You are going to watch that exact thing happen on the big screen in a minute.</p>
+      <p>And then the important edge, the dashed one. <span class="cue">trace the loop back</span> The skeptic's critique loops all the way back to the copywriter, who rewrites the headline. You’re going to watch that exact thing happen on the big screen in a minute.</p>
       <p>Output from one agent becoming input to another. Including backwards. <em>That</em> is the web.</p>
     </div>
   </section>
@@ -268,7 +268,7 @@
     <div class="shead"><span class="num">21</span><span class="eye">The part nobody demos</span><span class="time">22:42 · ~1.1 min</span></div>
     <div class="onscreen"><b>ON SCREEN:</b> The model is the brain. The harness is the body.</div>
       <div class="say">
-        <p>Here is the thing nobody puts in a demo. <span class="cue beat">beat</span></p><p>Everyone shows you the model. Nobody shows you the harness. And the harness is the product.</p><p>A brain in a jar cannot build a website. Everything between the model's guess and the finished page — the validation, the structure, the pictures, the taste rules — that is the harness. <em>That is where the quality actually comes from.</em></p><p>And here is why it matters to you: swap the model and the harness is untouched. Improve the harness, and <em>every</em> model you ever plug into it gets better. That is the leverage.</p>
+        <p>Okay, here's the bit nobody ever puts in a demo. <span class="cue beat">beat</span></p><p>Everyone shows you the model. Nobody shows you the harness. And honestly? The harness is the product.</p><p>A brain in a jar can't build you a website. All the stuff between the model's guess and the finished page, the validation, the structure, the pictures, the taste rules, that's the harness. <em>That’s where the quality actually comes from.</em></p><p>And here is why it matters to you: swap the model and the harness is untouched. Improve the harness, and <em>every</em> model you ever plug into it gets better. That’s the leverage.</p>
       </div>
   </section>
   <!-- 22 -->
@@ -276,7 +276,7 @@
     <div class="shead"><span class="num">22</span><span class="eye">What we actually built</span><span class="time">23:50 · ~1.1 min</span></div>
     <div class="onscreen"><b>ON SCREEN:</b> Sixteen agents and a set of rules.</div>
       <div class="say">
-        <p>So this is what is actually in there.</p><p>Sixteen agents, each with one job. Eighteen deterministic taste rules that reject output the model was perfectly happy with — em dashes, three identical cards, that AI purple, buttons you cannot read.</p><p>An architect that decides what sections the page even needs, so a food truck gets a menu and a story instead of the same template as a payroll tool. And best-of-three on the name and the headline, with a judge picking the sharpest.</p><p><em>Every single one of these exists because we looked at the output and were not happy with it.</em> <span class="cue beat">let that land</span></p>
+        <p>So this is what is actually in there.</p><p>Sixteen agents, each with one job. Eighteen deterministic taste rules that reject output the model was perfectly happy with, em dashes, three identical cards, that AI purple, buttons you can’t read.</p><p>An architect that decides what sections the page even needs, so a food truck gets a menu and a story instead of the same template as a payroll tool. And best-of-three on the name and the headline, with a judge picking the sharpest.</p><p><em>Every single one of these exists because we looked at the output and were not happy with it.</em> <span class="cue beat">let that land</span></p>
       </div>
   </section>
   <!-- 23 -->
@@ -284,7 +284,7 @@
     <div class="shead"><span class="num">23</span><span class="eye">Why this is worth your time</span><span class="time">24:58 · ~1.1 min</span></div>
     <div class="onscreen"><b>ON SCREEN:</b> The harness is the asset.</div>
       <div class="say">
-        <p>Why should you care, as engineers?</p><p>It is model agnostic — one config line moves it from a model on this laptop to a frontier API, and the crew never changes. Quality has a floor, because the guards run every single time. It is cheap to improve: every fix is a rule or an agent, not a retrain — you ship it this afternoon.</p><p>You can explain it. When it goes wrong you point at the agent that did it, not at a black box. And it survives the model — these things change every few months, the harness you build outlives all of them.</p><p><span class="cue">slow, land it</span> Everyone is chasing the next model. <em>The harness is the part you own.</em></p>
+        <p>So why should you care about any of this?</p><p>It doesn't care which model you use. One config line moves it from a model on this laptop to a frontier API, and the crew doesn't change at all. Quality has a floor, because those guards run every single time. And it's cheap to improve. Every fix is a rule or an agent, not a retrain, so you can ship it this afternoon.</p><p>You can explain it. When it goes wrong you point at the agent that did it, not at a black box. And it survives the model, these things change every few months, the harness you build outlives all of them.</p><p><span class="cue">slow, land it</span> Everyone is chasing the next model. <em>The harness is the part you own.</em></p>
       </div>
   </section>
   <!-- 24 -->
@@ -294,7 +294,7 @@
     <div class="say">
       <p>Here's the plumbing, and it's all boring, reliable Java, which is the point.</p>
       <p>Your phone posts one line to a Spring Boot server running on my hotspot. LangChain4j runs the crew against the local Qwen model. And every event, an agent starting, a headline appearing, a palette being chosen, streams to that stage screen over server-sent events.</p>
-      <p>Trace that path end to end and there is <em>no internet anywhere in it.</em> Your idea never leaves this laptop.</p>
+      <p>Trace that path end to end and there’s <em>no internet anywhere in it.</em> Your idea never leaves this laptop.</p>
     </div>
   </section>
   <!-- 25 -->
@@ -302,7 +302,7 @@
     <div class="shead"><span class="num">25</span><span class="eye">Lever 3, up close</span><span class="time">27:14 · ~1.1 min</span></div>
     <div class="onscreen"><b>ON SCREEN:</b> The Copywriter returns a typed Copy object, not a wall of text.</div>
     <div class="say">
-      <p>One quick close-up, because this is the lever nobody talks about. The copywriter does not hand me back a wall of text that I have to scrape with a regex and pray.</p>
+      <p>One quick close-up, because this is the lever nobody talks about. The copywriter doesn’t hand me back a wall of text that I have to scrape with a regex and pray.</p>
       <p>It returns a typed object. A headline field, a subhead field, three features. The designer returns a palette object. And the stage builds the page field by field, from data.</p>
       <p>When you control the <em>shape</em> of the answer, you stop hoping and you start building. You control the app.</p>
     </div>
@@ -312,7 +312,7 @@
     <div class="shead"><span class="num">26</span><span class="eye">Live code 1 of 2</span><span class="time">28:22 · ~1.1 min</span></div>
     <div class="onscreen"><b>ON SCREEN:</b> One Java interface. Annotations, no implementation.</div>
       <div class="say">
-        <p>Here is the whole worker. <span class="cue">point at the screen</span></p><p>It is a Java <em>interface</em>. That is it. There is no implementation anywhere in this project — I never wrote one.</p><p>The annotations are the program. SystemMessage is who this worker is. UserMessage is the job. LangChain4j builds the class at runtime and calls the model for me.</p>
+        <p>Here is the whole worker. <span class="cue">point at the screen</span></p><p>It’s a Java <em>interface</em>. That’s it. There’s no implementation anywhere in this project, I never wrote one.</p><p>The annotations are the program. SystemMessage is who this worker is. UserMessage is the job. LangChain4j builds the class at runtime and calls the model for me.</p>
       </div>
   </section>
   <!-- 27 -->
@@ -320,7 +320,7 @@
     <div class="shead"><span class="num">27</span><span class="eye">Live code 2 of 2</span><span class="time">29:30 · ~1.1 min</span></div>
     <div class="onscreen"><b>ON SCREEN:</b> The same interface, returning a typed record.</div>
       <div class="say">
-        <p>And now the bit that matters. <span class="cue beat">beat</span></p><p>Look at the return type. It is not a String. It is a Java record — a Copy object, with a headline, a subhead, three features.</p><p>I never parse anything. I never write a regex over the model's prose. <em>I ask for a type, and I get a type.</em> That is lever three, and it is the one that turns a chatbot into something you can actually build on.</p>
+        <p>And now the bit that matters. <span class="cue beat">beat</span></p><p>Look at the return type. It’s not a String. It’s a Java record, a Copy object, with a headline, a subhead, three features.</p><p>I never parse anything. I never write a regex over the model's prose. <em>I ask for a type, and I get a type.</em> That’s lever three, and it’s the one that turns a chatbot into something you can actually build on.</p>
       </div>
   </section>
   <!-- 28 -->
@@ -328,7 +328,7 @@
     <div class="shead"><span class="num">28</span><span class="eye">The live build</span><span class="time">30:38 · ~1.1 min</span></div>
     <div class="onscreen"><b>ON SCREEN:</b> The live build, running on the big screen.</div>
       <div class="say">
-        <p>Right. Let's actually run one. <span class="cue">switch to the stage, pick an idea from the queue</span></p><p>This is somebody in this room's idea, going in right now. Watch the left — that is the crew, and they light up as they start work.</p><p>The circles are agents. The lines are handoffs. When one finishes early it goes and helps another, and you will see the critique come back the other way. <span class="cue beat">let it run, narrate what you see</span></p>
+        <p>Right. Let's actually run one. <span class="cue">switch to the stage, pick an idea from the queue</span></p><p>This is somebody in this room's idea, going in right now. Watch the left, that’s the crew, and they light up as they start work.</p><p>The circles are agents. The lines are handoffs. When one finishes early it goes and helps another, and you will see the critique come back the other way. <span class="cue beat">let it run, narrate what you see</span></p>
       </div>
   </section>
   <!-- 29 -->
@@ -348,7 +348,7 @@
     <div class="say">
       <p>And before anyone thinks "sure, but in the real world," let me take that objection off the table with numbers.</p>
       <p>Around twelve hundred lines. A handful of files. Eleven agents that are really one model wearing eleven different system prompts. Zero cloud calls, all evening.</p>
-      <p>You could read the entire thing on the train home. The repo's in the QR at the end. There is no giant framework here that you have to buy into. It's just ordinary engineering.</p>
+      <p>You could read the entire thing on the train home. The repo's in the QR at the end. There’s no giant framework here that you have to buy into. It's just ordinary engineering.</p>
     </div>
   </section>
   <!-- 31 -->
@@ -356,9 +356,9 @@
     <div class="shead"><span class="num">31</span><span class="eye">What you actually watched</span><span class="time">34:03 · ~1.1 min</span></div>
     <div class="onscreen"><b>ON SCREEN:</b> The model is a component. The harness is the product.</div>
     <div class="say">
-      <p>This is the slide I most want you to remember, so I'm going to say it plainly.</p>
+      <p>Okay, this is the one I actually want you to remember, so let me just say it plainly.</p>
       <p>Everything you just watched, the parallel starts, the handoffs, the loops back, the fact that it didn't die when the model wobbled, the fact that nothing rude ever reached the screen, the fact that the queue kept building the whole time I talked, <em>none of that came from the model.</em></p>
-      <p>That is a harness. And a harness is ordinary engineering. Threads, queues, schedulers, validation, a human approval step. <span class="cue beat">beat</span> The model is a component. <strong>The harness is the product.</strong></p>
+      <p>That’s a harness. And a harness is ordinary engineering. Threads, queues, schedulers, validation, a human approval step. <span class="cue beat">beat</span> The model is a component. <strong>The harness is the product.</strong></p>
     </div>
   </section>
   <!-- 32 -->
@@ -374,27 +374,27 @@
   <!-- 33 -->
   <section class="slide" id="s33">
     <div class="shead"><span class="num">33</span><span class="eye">What the page actually shows</span><span class="time">36:19 · ~1.1 min</span></div>
-    <div class="onscreen"><b>ON SCREEN:</b> "Let the model decide" is not automatically right.</div>
+    <div class="onscreen"><b>ON SCREEN:</b> "Let the model decide" isn’t automatically right.</div>
     <div class="say">
       <p>One more counter-intuitive one. I asked the model which interface to draw for each page. It said "dashboard" for a savings tracker, and "calendar" for a coffee subscription. Both wrong.</p>
-      <p>A twenty-line keyword scorer beats it. So the scorer decides when the idea's own words are clear, and the model only breaks ties. <em>"Let the model decide" is not automatically the right call.</em> Sometimes the harness should overrule the brain. Knowing when is the job.</p>
+      <p>A twenty-line keyword scorer beats it. So the scorer decides when the idea's own words are clear, and the model only breaks ties. <em>"Let the model decide" isn’t automatically the right call.</em> Sometimes the harness should overrule the brain. Knowing when is the job.</p>
     </div>
   </section>
   <!-- 34 -->
   <section class="slide" id="s34">
     <div class="shead"><span class="num">34</span><span class="eye">The last edge in the web</span><span class="time">37:27 · ~1.1 min</span></div>
-    <div class="onscreen"><b>ON SCREEN:</b> The Critic reads the whole page — and isn't trusted either.</div>
+    <div class="onscreen"><b>ON SCREEN:</b> The Critic reads the whole page, and isn't trusted either.</div>
     <div class="say">
       <p>Two quick things about the last agent, the critic. First, a crew of specialists has a blind spot exactly where the specialisms meet. Every agent wrote one field; nobody read the whole page. So the only fix is an agent whose input <em>is</em> the finished artefact.</p>
-      <p>Second, and this is the one to take home: that critic doesn't get trusted just because it's the reviewer. Its rewrite goes through the same guardrail as everything else. And it gets refused. <em>The reviewer is not privileged.</em></p>
+      <p>Second, and this is the one to take home: that critic doesn't get trusted just because it's the reviewer. Its rewrite goes through the same guardrail as everything else. And it gets refused. <em>The reviewer isn’t privileged.</em></p>
     </div>
   </section>
   <!-- 35 -->
   <section class="slide" id="s35">
     <div class="shead"><span class="num">35</span><span class="eye">The reveal</span><span class="time">38:35 · ~1.1 min</span></div>
-    <div class="onscreen"><b>ON SCREEN:</b> The gallery — every page built during the talk.</div>
+    <div class="onscreen"><b>ON SCREEN:</b> The gallery, every page built during the talk.</div>
       <div class="say">
-        <p>So while I have been standing here talking, the crew has not stopped. <span class="cue">open the gallery</span></p><p>Every one of these is somebody's idea from tonight. Built on this laptop, during this talk, while I was busy.</p><p>Find yours. <span class="cue beat">let the room look</span> That is what one sentence and a crew of agents gets you.</p>
+        <p>So while I have been standing here talking, the crew hasn’t stopped. <span class="cue">open the gallery</span></p><p>Every one of these is somebody's idea from tonight. Built on this laptop, during this talk, while I was busy.</p><p>Find yours. <span class="cue beat">let the room look</span> That’s what one sentence and a crew of agents gets you.</p>
       </div>
   </section>
   <!-- 36 -->
@@ -410,8 +410,8 @@
     <div class="shead"><span class="num">37</span><span class="eye">The takeaway</span><span class="time">40:51 · ~1.1 min</span></div>
     <div class="onscreen"><b>ON SCREEN:</b> Close. LinkedIn + GitHub QR codes.</div>
     <div class="say">
-      <p>So here's where we landed. A function that just guesses, given a loop, a stack, six levers, and a crew, learns to command a team. In Java. Offline. On a laptop.</p>
-      <p>And the real skill was never a clever prompt. It was knowing <em>what to ask, and how to constrain the answer.</em></p>
+      <p>So, where did we land. You give a thing that just guesses a loop, a stack, six levers and a crew, and it ends up running a team for you. In Java. Offline. On a laptop.</p>
+      <p>And the skill was never writing a clever prompt. It's knowing <em>what to ask for, and how to box in the answer.</em></p>
       <p><span class="cue">gesture to QR codes</span> Left code connects with me on LinkedIn, right one is the whole repo on GitHub, clone it tonight. <span class="cue beat">beat</span> So. What do you want to break first? Thank you.</p>
     </div>
   </section>
