@@ -33,16 +33,19 @@ cleanup() { [[ -n "$TUNNEL_PID" ]] && kill "$TUNNEL_PID" 2>/dev/null || true; }
 trap cleanup EXIT
 
 if [[ "${1:-}" != "--local" ]]; then
-  command -v cloudflared >/dev/null || { echo "cloudflared missing: brew install cloudflared"; exit 1; }
-  LOG=$(mktemp)
-  cloudflared tunnel --url http://localhost:8080 --no-autoupdate >"$LOG" 2>&1 &
+  # A name we own, pointed at this laptop through nginx on the floati box.
+  # ssh puts port 8080 on that server's docker bridge; nginx holds the
+  # certificate and forwards to it. The address never changes, so the QR on
+  # the slide stays correct even if this is restarted mid talk.
+  HOST="${TUNNEL_HOST:-floati}"
+  URL="${PUBLIC_URL:-https://live.floati.life}"
+  command -v ssh >/dev/null || { echo "ssh missing"; exit 1; }
+  echo "opening the tunnel to $HOST..."
+  ssh -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=20 -o ServerAliveCountMax=3 \
+      -R 172.18.0.1:8080:127.0.0.1:8080 "$HOST" &
   TUNNEL_PID=$!
-  echo "opening a public tunnel..."
-  for _ in $(seq 1 40); do
-    URL=$(grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' "$LOG" 2>/dev/null | head -1) && [[ -n "$URL" ]] && break
-    sleep 1
-  done
-  [[ -z "${URL:-}" ]] && { echo "tunnel did not come up, run with --local"; exit 1; }
+  sleep 4
+  kill -0 "$TUNNEL_PID" 2>/dev/null || { echo "tunnel failed, run with --local"; exit 1; }
   ARGS+=(--live.publicUrl="$URL")
   echo
   echo "  the room scans   $URL"
