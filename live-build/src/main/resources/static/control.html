@@ -180,6 +180,7 @@
     es.addEventListener("gate", e => { lastBeat = Date.now(); gateOpen = JSON.parse(e.data).open; paintGate(); });
     es.addEventListener("auto", e => { lastBeat = Date.now(); const d = JSON.parse(e.data); autoOn = d.on; paintAuto(d.next); });
     es.addEventListener("tally", e => { lastBeat = Date.now(); });
+    es.addEventListener("beat", e => { lastBeat = Date.now(); setLive(true); });
     es.addEventListener("run-start", e => { lastBeat = Date.now(); running = JSON.parse(e.data).id; document.querySelectorAll(".item button").forEach(b=>b.disabled=true); });
     es.addEventListener("run-done", e => { lastBeat = Date.now(); running=null;
       document.getElementById("status").textContent = autoOn ? "Auto-advancing to the next…" : "Done. Pick the next one."; refreshQueue(); });
@@ -190,8 +191,9 @@
   // second belt: poll anyway, so a silently dead stream still cannot leave you stale
   setInterval(() => {
     refreshQueue();
-    if (es && es.readyState === 2) connect();
-    setLive(es && es.readyState === 1);
+    const stale = Date.now() - lastBeat > 35000;
+    if (!es || es.readyState === 2 || stale) { setLive(false); connect(); }
+    else setLive(es.readyState === 1);
   }, 5000);
   // and come straight back when the laptop wakes or you switch back to this tab
   document.addEventListener("visibilitychange", () => { if (!document.hidden){ refreshQueue(); if (!es || es.readyState !== 1) connect(); } });

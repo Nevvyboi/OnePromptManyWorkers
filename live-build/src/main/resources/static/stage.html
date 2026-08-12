@@ -35,6 +35,11 @@
   .topbar .stat{font-size:.66rem;letter-spacing:.1em;color:var(--dim)}
   .topbar .stat b{color:var(--live);font-weight:600}
   .topbar .node{font-size:.66rem;letter-spacing:.16em;color:var(--faint);text-transform:uppercase}
+  .livedot{font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--hot);
+           border:1px solid var(--hot);border-radius:99px;padding:.1rem .5rem;margin-left:.7rem}
+  .livedot.on{color:var(--live);border-color:var(--live)}
+  .livedot.on::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;
+           background:var(--live);margin-right:.35rem;vertical-align:middle;animation:rec 1.6s ease-in-out infinite}
   @media(prefers-reduced-motion:reduce){.topbar .live .rec{animation:none}}
 
   /* ---------- the console grid ---------- */
@@ -301,7 +306,7 @@
     <span class="sub" id="subline">one prompt · many workers · the crew on this laptop</span>
     <span class="spacer"></span>
     <span class="stat" id="runTotal"></span>
-    <span class="node" id="modeTop"></span>
+    <span class="node" id="modeTop"></span><span class="livedot" id="livedot">connecting</span>
     <button class="tbtn" id="drawerBtn" title="show the queue">☰ queue <span class="b" id="drawerCount"></span></button>
   </header>
 
@@ -603,7 +608,43 @@
   }
 
   // ---------- SSE ----------
-  const es = new EventSource("/api/events");
+  // The stream dies whenever the server restarts, and a plain EventSource that
+  // has been closed stays closed. On a projector that means the stage quietly
+  // freezes on the last thing it saw, which looks like the demo hanging. This
+  // keeps the registered listeners and re-attaches them to a fresh stream.
+  const es = (function(){
+    const handlers = {}; let src = null;
+    function paint(ok){
+      const el = document.getElementById("livedot");
+      if (el) { el.textContent = ok ? "live" : "reconnecting"; el.className = "livedot" + (ok ? " on" : ""); }
+    }
+    let lastBeat = Date.now();
+    function open(){
+      try { if (src) src.close(); } catch(e){}
+      src = new EventSource("/api/events");
+      src.onopen = () => { lastBeat = Date.now(); paint(true); };
+      src.addEventListener("beat", () => { lastBeat = Date.now(); paint(true); });
+      for (const k in handlers) handlers[k].forEach(fn => src.addEventListener(k, fn));
+      src.onerror = () => { paint(false); if (src.readyState === 2) setTimeout(open, 1500); };
+    }
+    open();
+    // watchdog: a stream can go quiet without ever firing onerror
+    // readyState lies: a dropped stream can still report open while nothing flows,
+    // so the beat is what we actually trust.
+    setInterval(() => {
+      const stale = Date.now() - lastBeat > 35000;
+      if (!src || src.readyState === 2 || stale) { paint(false); open(); }
+      else paint(src.readyState === 1);
+    }, 5000);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden && (!src || src.readyState !== 1)) open();
+    });
+    return {
+      addEventListener(k, fn){ (handlers[k] = handlers[k] || []).push(fn); if (src) src.addEventListener(k, fn); },
+      get readyState(){ return src ? src.readyState : 0; },
+      set onerror(_){ /* handled inside */ },
+    };
+  })();
   const J = e => JSON.parse(e.data);
   es.addEventListener("info", e => { const d=J(e);
     // Only claim every token stays here when that is actually true

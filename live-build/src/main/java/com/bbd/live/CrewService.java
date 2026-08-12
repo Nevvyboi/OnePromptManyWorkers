@@ -2013,6 +2013,18 @@ public class CrewService {
      * the background instead. A phone locking mid-talk is not an exceptional event,
      * so nothing thrown by a single emitter is allowed past this point.
      */
+    /**
+     * A stream can die without either end noticing: the browser still reports the
+     * connection open, the server still holds an emitter, and nothing flows. On a
+     * projector that looks exactly like a demo that has hung. A beat every ten
+     * seconds gives both ends something to miss, and keeps proxies from closing an
+     * idle connection.
+     */
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 10000, initialDelay = 10000)
+    public void heartbeat() {
+        broadcast("beat", Map.of("t", System.currentTimeMillis()));
+    }
+
     private void broadcast(String event, Object data) {
         for (SseEmitter em : new ArrayList<>(emitters)) send(em, event, data);
     }
