@@ -708,8 +708,9 @@ async function build() {
       { x: MX, y: 1.15, w: 11, h: 0.9, fontFace: DISP, bold: true, fontSize: 30 });
     card(s, MX, 2.25, 5.5, 3.5, { fill: INK, line: INK });
     s.addText([
-      { text: "// the Copywriter's return type\n", options: { color: "6B7280" } },
+      { text: "// Model.java, verbatim\n", options: { color: "6B7280" } },
       { text: "record ", options: { color: "C4B5FD" } }, { text: "Copy", options: { color: "7DD3FC" } }, { text: "(\n", options: { color: "E6E9F0" } },
+      { text: "   String ", options: { color: "7DD3FC" } }, { text: "badge,\n", options: { color: "E6E9F0" } },
       { text: "   String ", options: { color: "7DD3FC" } }, { text: "headline,\n", options: { color: "E6E9F0" } },
       { text: "   String ", options: { color: "7DD3FC" } }, { text: "subhead,\n", options: { color: "E6E9F0" } },
       { text: "   String ", options: { color: "7DD3FC" } }, { text: "cta,\n", options: { color: "E6E9F0" } },
@@ -742,35 +743,38 @@ async function build() {
   }
   const cKw = "C4B5FD", cTy = "7DD3FC", cSt = "6EE7D8", cAn = "FBBF24", cCm = "6B7280", cTx = "E6E9F0";
 
-  codeSlide("Live code  /  1 of 2",
-    [{ text: "One interface. ", options: { color: INK } }, { text: "Every worker.", options: { color: INDIGO } }],
+  codeSlide("Live code  /  1 of 2  ·  Agents.java",
+    [{ text: "A worker is an ", options: { color: INK } }, { text: "interface.", options: { color: INDIGO } }],
     [
-      { text: "// No implementation. The annotations are the program.", options: { color: cCm, breakLine: true } },
-      { text: "interface ", options: { color: cKw } }, { text: "Worker", options: { color: cTy } }, { text: " {", options: { color: cTx, breakLine: true } },
-      { text: "", options: { breakLine: true } },
-      { text: "  @SystemMessage", options: { color: cAn } }, { text: "(", options: { color: cTx } }, { text: "\"You are a {{role}}.", options: { color: cSt } }, { text: "", options: { breakLine: true } },
-      { text: "                 Answer only from that view.\"", options: { color: cSt } }, { text: ")", options: { color: cTx, breakLine: true } },
-      { text: "  @UserMessage", options: { color: cAn } }, { text: "(", options: { color: cTx } }, { text: "\"{{task}}\"", options: { color: cSt } }, { text: ")", options: { color: cTx, breakLine: true } },
-      { text: "  String ", options: { color: cTy } }, { text: "work(", options: { color: cTx } }, { text: "@V", options: { color: cAn } }, { text: "(\"role\") String role,", options: { color: cTx, breakLine: true } },
-      { text: "              ", options: { color: cTx } }, { text: "@V", options: { color: cAn } }, { text: "(\"task\") String task);", options: { color: cTx, breakLine: true } },
+      { text: "// Agents.java, verbatim. There is no implementation anywhere.", options: { color: cCm, breakLine: true } },
+      { text: "public interface ", options: { color: cKw } }, { text: "Namer", options: { color: cTy } }, { text: " {", options: { color: cTx, breakLine: true } },
+      { text: "  @SystemMessage", options: { color: cAn } }, { text: "(\"\"\"", options: { color: cTx, breakLine: true } },
+      { text: "      You name products. Given an idea, give ONE name of 4 to 14", options: { color: cSt, breakLine: true } },
+      { text: "      letters, easy to say out loud, one or two words.", options: { color: cSt, breakLine: true } },
+      { text: "      Never end the name with ly, ify, io, Hub, Kit, Pro, App.", options: { color: cSt, breakLine: true } },
+      { text: "      Name it after the moment the product matters. A bin rota", options: { color: cSt, breakLine: true } },
+      { text: "      is called Wednesday. A braai timer is called Coalfall.", options: { color: cSt, breakLine: true } },
+      { text: "      \"\"\"", options: { color: cTx } }, { text: ")", options: { color: cTx, breakLine: true } },
+      { text: "  @UserMessage", options: { color: cAn } }, { text: "(", options: { color: cTx } }, { text: "\"Product idea: {{it}}\"", options: { color: cSt } }, { text: ")", options: { color: cTx, breakLine: true } },
+      { text: "  String ", options: { color: cTy } }, { text: "name(String idea);", options: { color: cTx, breakLine: true } },
       { text: "}", options: { color: cTx } },
     ],
-    "A worker in LangChain4j is an interface. No implementation. The annotations are the program. The system message makes it a specialist, role and task get slotted in. One interface backs every worker, that is the many workers line in code.");
+    "This is the real file, not a tidied up version. A worker is a Java interface and nothing else. I never wrote an implementation. The annotations are the program: the system message is the whole personality, and look at it, most of that prompt is me telling it what NOT to do. Never end in ly or Hub. That is a rule I added because the model kept handing me Choreify. The examples at the bottom are doing the real work.");
 
-  codeSlide("Live code  /  2 of 2",
-    [{ text: "Plan, dispatch, ", options: { color: INK } }, { text: "synthesize.", options: { color: INDIGO } }],
+  codeSlide("Live code  /  2 of 2  ·  CrewService.java",
+    [{ text: "Four workers, ", options: { color: INK } }, { text: "one line each.", options: { color: INDIGO } }],
     [
-      { text: "Plan", options: { color: cTy } }, { text: " plan = planner.assemble(prompt);", options: { color: cTx } }, { text: "   // 1 prompt -> a crew", options: { color: cCm, breakLine: true } },
+      { text: "// CrewService.runCrew, verbatim. They all start at once.", options: { color: cCm, breakLine: true } },
+      { text: "Future<String> ", options: { color: cTy } }, { text: "tensionF = pool.submit(() -> safeInsight(stage(), idea.text));", options: { color: cTx, breakLine: true } },
+      { text: "Future<String> ", options: { color: cTy } }, { text: "factsF   = pool.submit(() -> safeFacts(stage(), idea.text));", options: { color: cTx, breakLine: true } },
+      { text: "Future<String> ", options: { color: cTy } }, { text: "nameF    = pool.submit(() -> safeName(stage(), idea.text));", options: { color: cTx, breakLine: true } },
+      { text: "Future<Palette> ", options: { color: cTy } }, { text: "paletteF = pool.submit(() -> safePalette(stage(), idea.text));", options: { color: cTx, breakLine: true } },
       { text: "", options: { breakLine: true } },
-      { text: "var", options: { color: cKw } }, { text: " notes = ", options: { color: cTx } }, { text: "new", options: { color: cKw } }, { text: " StringBuilder();", options: { color: cTx, breakLine: true } },
-      { text: "for", options: { color: cKw } }, { text: " (", options: { color: cTx } }, { text: "var", options: { color: cKw } }, { text: " a : plan.crew()) {", options: { color: cTx } }, { text: "        // fan out", options: { color: cCm, breakLine: true } },
-      { text: "    String answer = worker.work(a.role(), a.task());", options: { color: cTx, breakLine: true } },
-      { text: "    notes.append(a.role()).append(answer);", options: { color: cTx, breakLine: true } },
-      { text: "}", options: { color: cTx, breakLine: true } },
-      { text: "", options: { breakLine: true } },
-      { text: "String", options: { color: cTy } }, { text: " result = synthesizer.synthesize(notes);", options: { color: cTx } }, { text: "  // fan in", options: { color: cCm } },
+      { text: "// the namer lands first, so its result unblocks three others", options: { color: cCm, breakLine: true } },
+      { text: "String ", options: { color: cTy } }, { text: "productName = nameF.get();", options: { color: cTx, breakLine: true } },
+      { text: "Copy ", options: { color: cTy } }, { text: "copy = copyF.get();", options: { color: cTx } }, { text: "     // written against the tension", options: { color: cCm } },
     ],
-    "The orchestrator is the whole talk in fifteen lines. The planner turns one prompt into a crew, a typed Plan. We loop, each worker does its job, we collect notes, the synthesizer folds them into one answer. Fan out, fan in. Now, let's run it.");
+    "And this is the many workers bit, also verbatim. Four pool.submit calls, four agents running at the same time, each one line. No framework, just a Java executor. The namer finishes first because it has the smallest job, and the moment it does, three other agents unblock. That is the web you saw on the slide, in actual code. Now let us run it.");
 
   // =============================================== THE LIVE BUILD (demo moment)
   {
