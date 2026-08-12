@@ -8,11 +8,11 @@ const sharp = require("sharp");
 const QRCode = require("qrcode");
 const Fi = require("react-icons/fi");
 
-// ====== EDIT THESE with the real links / your hotspot IP, then re-run ======
+// ====== EDIT THESE with the real links, then re-run ======
 const LINKEDIN = "https://www.linkedin.com/in/nevin-tom";
 const GITHUB = "https://github.com/Nevvyboi/OnePromptManyWorkers";
 // The audience join URL. On stage, prefer the app's live /join screen (auto IP);
-// this baked QR is a backup. Set it to your laptop's hotspot IP if you want it real.
+// this baked QR is only a backup: go.sh prints the real public URL on the night.
 const JOIN_URL = "http://172.20.10.2:8080/";
 // ===========================================================================
 
@@ -147,7 +147,7 @@ async function build() {
     eyebrow(s, "Join in  ·  this one's interactive");
     s.addText([{ text: "Scan it. Type ", options: { color: INK } }, { text: "one line.", options: { color: INDIGO } }, { text: "\nThe crew starts on it now.", options: { color: INK } }],
       { x: MX, y: 1.5, w: 7, h: 1.9, fontFace: DISP, bold: true, fontSize: 38, lineSpacing: 46 });
-    const steps = [["1", "Join the room's Wi-Fi hotspot"], ["2", "Scan the code with your phone"], ["3", "Send the crew a product idea"]];
+    const steps = [["1", "Scan the code with your phone"], ["2", "Type one line, any product idea"], ["3", "Watch the crew build it live"]];
     steps.forEach((st, i) => {
       const y = 3.85 + i * 0.74;
       s.addShape("ellipse", { x: MX, y, w: 0.44, h: 0.44, fill: { color: INDIGO }, line: { type: "none" } });
@@ -666,7 +666,7 @@ async function build() {
       { x: MX, y: 1.15, w: 11, h: 0.9, fontFace: DISP, bold: true, fontSize: 32 });
     const stages = [
       ["FiSmartphone", INDIGO, "Phone", "POST /submit"],
-      ["FiServer", SKY, "Spring Boot", "on your hotspot"],
+      ["FiServer", SKY, "Spring Boot", "on this laptop"],
       ["FiShare2", VIOLET, "The crew", "LangChain4j + Qwen"],
       ["FiZap", AMBER, "Live events", "server-sent stream"],
       ["FiMonitor", TEAL, "The stage", "page builds live"],
@@ -680,7 +680,7 @@ async function build() {
       s.addText(stages[i][3], { x: x + 0.1, y: y + 1.6, w: cw - 0.2, h: 0.6, align: "center", fontFace: MONO, fontSize: 9, color: MUTED, lineSpacing: 12 });
       if (i < n - 1) s.addShape("line", { x: x + cw + gap * 0.15, y: y + ch / 2, w: gap * 0.7, h: 0, line: { color: FAINT, width: 1.6, endArrowType: "triangle" } });
     }
-    s.addText("Their phone talks to a laptop on your hotspot. The agents build the page. Every step streams to the projector. Nothing touches the internet.",
+    s.addText("Their phone reaches this laptop through a tunnel. The agents build the page here. Every step streams to the projector.",
       { x: 2.0, y: 5.75, w: W - 4, h: 0.8, align: "center", fontFace: BODY, fontSize: 15, color: MUTED, lineSpacing: 22 });
     s.addNotes("This is the demo's plumbing, all boring reliable Java. Their phone posts one line to a Spring Boot server on my hotspot. LangChain4j runs the crew on the local Qwen model. Each event, an agent starting, a headline, a palette, streams to the stage over server-sent events. No internet anywhere in that path.");
   }

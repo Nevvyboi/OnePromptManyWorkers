@@ -1,6 +1,7 @@
 package com.bbd.live;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -17,10 +18,21 @@ public class ApiController {
 
     private final CrewService crew;
     @Value("${server.port:8080}") String port;
+    /**
+     * A public https URL for the room to scan, from a tunnel. Without it the QR
+     * points at this laptop's LAN address, which only works if everyone joins the
+     * same wifi: a room full of people fighting a hotspot is the most fragile part
+     * of the whole demo.
+     */
+    @Value("${live.publicUrl:}") String publicUrl;
 
     public ApiController(CrewService crew) { this.crew = crew; }
 
-    private String audienceUrl() { return "http://" + Net.lanIp() + ":" + port + "/"; }
+    private String audienceUrl() {
+        if (publicUrl != null && !publicUrl.isBlank())
+            return publicUrl.endsWith("/") ? publicUrl : publicUrl + "/";
+        return "http://" + Net.lanIp() + ":" + port + "/";
+    }
 
     @GetMapping("/info")
     public Map<String, Object> info() { return crew.info(audienceUrl()); }
@@ -90,8 +102,21 @@ public class ApiController {
     @GetMapping("/mine/{id}")
     public Map<String, Object> mine(@PathVariable String id) { return crew.mine(id); }
 
-    @GetMapping("/events")
-    public SseEmitter events() { return crew.subscribe(); }
+    /**
+     * The live stream the stage listens to. A proxy that buffers this delivers
+     * nothing until the run is over, which is the same as being broken: through a
+     * Cloudflare tunnel the stage sat empty until these headers were set. Content
+     * type alone is not enough, the proxy has to be told not to buffer and not to
+     * compress, and the connection has to be kept alive.
+     */
+    @GetMapping(value = "/events", produces = "text/event-stream;charset=UTF-8")
+    public SseEmitter events(HttpServletResponse res) {
+        res.setHeader("X-Accel-Buffering", "no");     // nginx and friends
+        res.setHeader("Cache-Control", "no-cache, no-transform");
+        res.setHeader("Connection", "keep-alive");
+        res.setHeader("Content-Encoding", "identity"); // never gzip a live stream
+        return crew.subscribe();
+    }
 
     @GetMapping(value = "/qr", produces = MediaType.IMAGE_PNG_VALUE)
     public byte[] qr() { return Qr.png(audienceUrl(), 480); }
