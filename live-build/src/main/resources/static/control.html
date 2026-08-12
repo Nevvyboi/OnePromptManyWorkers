@@ -24,6 +24,12 @@
   .qrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
   .qrow .n{font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
   .mode{font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+  .live{font-family:var(--mono);font-size:.68rem;color:var(--rose);margin-left:.7rem;
+        border:1px solid var(--rose);border-radius:99px;padding:.12rem .5rem}
+  .live.on{color:var(--teal);border-color:var(--teal)}
+  .live.on::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;
+        background:var(--teal);margin-right:.35rem;vertical-align:middle;animation:lp 1.6s ease-in-out infinite}
+  @keyframes lp{0%,100%{opacity:1}50%{opacity:.25}}
   .queue{display:flex;flex-direction:column;gap:10px;margin-top:6px}
   .empty{color:var(--faint);font-family:var(--mono);font-size:.82rem;padding:20px 4px}
   .item{display:flex;align-items:center;gap:14px;background:#0f131c;border:1px solid var(--line);border-radius:12px;padding:12px 14px;transition:border-color .2s}
@@ -73,7 +79,7 @@
     <div>
       <div class="qrow">
         <div><h1>Submissions</h1><span class="n">tap Run to build one on the big screen</span></div>
-        <span class="mode" id="mode"></span>
+        <span class="mode" id="mode"></span><span class="live" id="live">connecting…</span>
       </div>
       <div class="card">
         <div class="queue" id="queue"><div class="empty">No ideas yet. When people scan and submit, they show up here.</div></div>
@@ -157,13 +163,38 @@
 
   function refreshQueue(){ fetch("/api/queue?key="+encodeURIComponent(KEY)).then(r=>r.json()).then(d=>render(d.ideas)).catch(()=>{}); }
 
-  const es = new EventSource("/api/events");
-  es.addEventListener("queue", e => render(JSON.parse(e.data).ideas));
-  es.addEventListener("gate", e => { gateOpen = JSON.parse(e.data).open; paintGate(); });
-  es.addEventListener("auto", e => { const d = JSON.parse(e.data); autoOn = d.on; paintAuto(d.next); });
-  es.addEventListener("run-start", e => { running = JSON.parse(e.data).id; document.querySelectorAll(".item button").forEach(b=>b.disabled=true); });
-  es.addEventListener("run-done", e => { running=null; document.getElementById("status").textContent = autoOn ? "Auto-advancing to the next…" : "Done. Pick the next one."; refreshQueue(); });
+  // This page must never sit there quietly out of date. A stream can drop, and
+  // a restarted server leaves the old one closed for good, so we reconnect, poll
+  // as a second belt, and say plainly on screen whether what you are reading is live.
+  let es = null, lastBeat = 0;
+  function setLive(ok){
+    const el = document.getElementById("live");
+    el.textContent = ok ? "live" : "reconnecting…";
+    el.className = "live" + (ok ? " on" : "");
+  }
+  function connect(){
+    try { if (es) es.close(); } catch(e){}
+    es = new EventSource("/api/events");
+    es.onopen = () => { lastBeat = Date.now(); setLive(true); refreshQueue(); };
+    es.addEventListener("queue", e => { lastBeat = Date.now(); setLive(true); render(JSON.parse(e.data).ideas); });
+    es.addEventListener("gate", e => { lastBeat = Date.now(); gateOpen = JSON.parse(e.data).open; paintGate(); });
+    es.addEventListener("auto", e => { lastBeat = Date.now(); const d = JSON.parse(e.data); autoOn = d.on; paintAuto(d.next); });
+    es.addEventListener("tally", e => { lastBeat = Date.now(); });
+    es.addEventListener("run-start", e => { lastBeat = Date.now(); running = JSON.parse(e.data).id; document.querySelectorAll(".item button").forEach(b=>b.disabled=true); });
+    es.addEventListener("run-done", e => { lastBeat = Date.now(); running=null;
+      document.getElementById("status").textContent = autoOn ? "Auto-advancing to the next…" : "Done. Pick the next one."; refreshQueue(); });
+    es.onerror = () => { setLive(false); if (es.readyState === 2) setTimeout(connect, 1500); };
+  }
+  connect();
   refreshQueue();
+  // second belt: poll anyway, so a silently dead stream still cannot leave you stale
+  setInterval(() => {
+    refreshQueue();
+    if (es && es.readyState === 2) connect();
+    setLive(es && es.readyState === 1);
+  }, 5000);
+  // and come straight back when the laptop wakes or you switch back to this tab
+  document.addEventListener("visibilitychange", () => { if (!document.hidden){ refreshQueue(); if (!es || es.readyState !== 1) connect(); } });
 </script>
 </body>
 </html>

@@ -29,7 +29,7 @@ else
 fi
 
 TUNNEL_PID=""
-cleanup() { [[ -n "$TUNNEL_PID" ]] && kill "$TUNNEL_PID" 2>/dev/null || true; }
+cleanup() { [[ -n "$TUNNEL_PID" ]] && kill "$TUNNEL_PID" 2>/dev/null; pkill -f "ssh -N .*172.18.0.1:8080" 2>/dev/null; true; }
 trap cleanup EXIT
 
 if [[ "${1:-}" != "--local" ]]; then
@@ -41,11 +41,27 @@ if [[ "${1:-}" != "--local" ]]; then
   URL="${PUBLIC_URL:-https://live.floati.life}"
   command -v ssh >/dev/null || { echo "ssh missing"; exit 1; }
   echo "opening the tunnel to $HOST..."
-  ssh -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=20 -o ServerAliveCountMax=3 \
-      -R 172.18.0.1:8080:127.0.0.1:8080 "$HOST" &
+  # Keep it up. A dropped tunnel shows the room "the crew is not awake yet",
+  # so if ssh dies we dial straight back rather than waiting to be noticed.
+  (
+    while true; do
+      ssh -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
+          -o StrictHostKeyChecking=accept-new \
+          -R 172.18.0.1:8080:127.0.0.1:8080 "$HOST" 2>/dev/null
+      echo "  tunnel dropped, redialling..." >&2
+      sleep 2
+    done
+  ) &
   TUNNEL_PID=$!
-  sleep 4
-  kill -0 "$TUNNEL_PID" 2>/dev/null || { echo "tunnel failed, run with --local"; exit 1; }
+  # wait for the far end to actually be listening, not just for ssh to start
+  for _ in $(seq 1 20); do
+    ssh -o BatchMode=yes -o ConnectTimeout=5 "$HOST" \
+        'ss -ltn 2>/dev/null | grep -q "172.18.0.1:8080"' 2>/dev/null && break
+    sleep 1
+  done
+  ssh -o BatchMode=yes "$HOST" 'ss -ltn 2>/dev/null | grep -q "172.18.0.1:8080"' 2>/dev/null \
+    && echo "  tunnel confirmed on the far end" \
+    || { echo "  tunnel did not come up. Run with --local, or check: ssh $HOST"; exit 1; }
   ARGS+=(--live.publicUrl="$URL")
   echo
   echo "  the room scans   $URL"
