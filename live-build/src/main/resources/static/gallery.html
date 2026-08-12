@@ -149,9 +149,31 @@
   fetch("/api/gallery").then(r=>r.json()).then(render).catch(()=>{});
   fetch("/api/info").then(r=>r.json()).then(d=>{ document.getElementById("mode").textContent = d.mock ? "mock mode" : ((d.model || "local model") + " · local"); });
 
-  const es = new EventSource("/api/events");
-  es.addEventListener("gallery", e => render(JSON.parse(e.data)));
-  es.onerror = () => {};
+  // The gallery is the closing reveal, and it is usually left open for the whole
+  // talk while the crew builds behind it. A stream that dies quietly would leave
+  // it showing an empty wall at the moment it matters most, so it reconnects, and
+  // it trusts the server's beat rather than readyState, which reports a dead
+  // connection as open.
+  function refresh(){ fetch("/api/gallery").then(r=>r.json()).then(render).catch(()=>{}); }
+  (function(){
+    let src = null, lastBeat = Date.now();
+    function open(){
+      try { if (src) src.close(); } catch(e){}
+      src = new EventSource("/api/events");
+      src.onopen = () => { lastBeat = Date.now(); refresh(); };
+      src.addEventListener("beat", () => { lastBeat = Date.now(); });
+      src.addEventListener("gallery", e => { lastBeat = Date.now(); render(JSON.parse(e.data)); });
+      src.onerror = () => { if (src.readyState === 2) setTimeout(open, 1500); };
+    }
+    open();
+    setInterval(() => {
+      refresh();                                   // second belt, cheap and local
+      if (!src || src.readyState === 2 || Date.now() - lastBeat > 35000) open();
+    }, 5000);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden){ refresh(); if (!src || src.readyState !== 1) open(); }
+    });
+  })();
 </script>
 </body>
 </html>
