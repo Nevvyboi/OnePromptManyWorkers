@@ -2001,12 +2001,23 @@ public class CrewService {
                 "model", modelName);
     }
 
+    /**
+     * A viewer who closed a tab must never take the build down with them. One dead
+     * connection used to throw a broken pipe out of here, up through the crew, and
+     * the whole run died: the stage went quiet and the idea was quietly rebuilt in
+     * the background instead. A phone locking mid-talk is not an exceptional event,
+     * so nothing thrown by a single emitter is allowed past this point.
+     */
     private void broadcast(String event, Object data) {
-        for (SseEmitter em : emitters) send(em, event, data);
+        for (SseEmitter em : new ArrayList<>(emitters)) send(em, event, data);
     }
     private void send(SseEmitter em, String event, Object data) {
-        try { em.send(SseEmitter.event().name(event).data(data, MediaType.APPLICATION_JSON)); }
-        catch (Exception e) { emitters.remove(em); }
+        try {
+            em.send(SseEmitter.event().name(event).data(data, MediaType.APPLICATION_JSON));
+        } catch (Throwable t) {
+            emitters.remove(em);
+            try { em.complete(); } catch (Throwable ignored) { /* already gone */ }
+        }
     }
     private void sleep(long ms) throws InterruptedException { Thread.sleep(ms); }
 }
