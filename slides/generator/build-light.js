@@ -13,7 +13,13 @@ const LINKEDIN = "https://www.linkedin.com/in/nevin-tom";
 const GITHUB = "https://github.com/Nevvyboi/OnePromptManyWorkers";
 // The audience join URL. On stage, prefer the app's live /join screen (auto IP);
 // this baked QR is only a backup: go.sh prints the real public URL on the night.
-const JOIN_URL = "http://172.20.10.2:8080/";
+// The URL the room scans. A quick tunnel gets a new address every restart, so
+// this must never be typed by hand: deck.sh reads it off the running app and
+// passes it in. Building without it prints a warning and marks the slide.
+const JOIN_URL = process.env.JOIN_URL || "";
+const HAS_JOIN = JOIN_URL.trim().length > 0;
+const JOIN_SHOWN = HAS_JOIN ? JOIN_URL.replace(/^https?:\/\//, "").replace(/\/$/, "") : "start the app, then run deck.sh";
+if (!HAS_JOIN) console.warn("\n  !!  no JOIN_URL: the QR slides will say so. Start the app and run ./deck.sh\n");
 // ===========================================================================
 
 // ---------- light palette ----------
@@ -158,11 +164,20 @@ async function build() {
       { x: MX, y: 6.35, w: 6.6, h: 0.6, fontFace: MONO, fontSize: 11, color: FAINT, lineSpacing: 16 });
     const qx = 8.7, qy = 1.55, qw = 3.5, qh = 4.45;
     card(s, qx, qy, qw, qh);
-    s.addImage({ data: await qrData(JOIN_URL), x: qx + (qw - 2.4) / 2, y: qy + 0.4, w: 2.4, h: 2.4 });
-    await chip(s, qx + qw / 2, qy + 3.3, 0.5, "FiSmartphone", INDIGO);
-    s.addText("scan to join", { x: qx, y: qy + 3.62, w: qw, h: 0.35, align: "center", fontFace: DISP, bold: true, fontSize: 16, color: INK });
-    s.addText("the crew is waiting", { x: qx, y: qy + 3.95, w: qw, h: 0.3, align: "center", fontFace: BODY, fontSize: 12, color: MUTED });
-    s.addNotes("Put this up early and leave it up. This is the setup for the whole talk. 'Scan that, hop on the wifi, send my agents a product idea. Here is the thing: the moment you send it, a crew of agents on this laptop starts building a real landing page for it. They will keep working the entire time I am talking. At the end I will show you every single one.' Then carry on. The queue fills while you teach, and the payoff is waiting.");
+    if (HAS_JOIN) {
+      s.addImage({ data: await qrData(JOIN_URL), x: qx + (qw - 2.4) / 2, y: qy + 0.35, w: 2.4, h: 2.4 });
+    } else {
+      s.addShape("roundRect", { x: qx + (qw - 2.4) / 2, y: qy + 0.35, w: 2.4, h: 2.4, rectRadius: 0.1,
+        fill: { color: "FDECEC" }, line: { color: ROSE, width: 1.5, dashType: "dash" } });
+      s.addText("no URL yet\nrun ./deck.sh", { x: qx + (qw - 2.4) / 2, y: qy + 1.25, w: 2.4, h: 0.7,
+        align: "center", fontFace: MONO, fontSize: 12, color: ROSE, lineSpacing: 16 });
+    }
+    await chip(s, qx + qw / 2, qy + 3.15, 0.5, "FiSmartphone", INDIGO);
+    s.addText("scan to join", { x: qx, y: qy + 3.47, w: qw, h: 0.32, align: "center", fontFace: DISP, bold: true, fontSize: 16, color: INK });
+    // the address in words, for the phone whose camera will not play along
+    s.addText(JOIN_SHOWN, { x: qx + 0.12, y: qy + 3.82, w: qw - 0.24, h: 0.5, align: "center",
+      fontFace: MONO, fontSize: JOIN_SHOWN.length > 34 ? 8.5 : 10, color: HAS_JOIN ? INDIGO : ROSE, lineSpacing: 12 });
+    s.addNotes("Put this up early and leave it up. This is the setup for the whole talk. 'Scan that, from wherever you are, no wifi to join, and send my agents a product idea. Here is the thing: the moment you send it, a crew of agents on this laptop starts building a real landing page for it. They will keep working the entire time I am talking. At the end I will show you every single one.' Then carry on. The queue fills while you teach, and the payoff is waiting.");
   }
 
   // =============================================== 4 ROADMAP
@@ -1040,7 +1055,11 @@ async function build() {
     s.addNotes("Land the plane. A function that guesses, given a loop, a stack, six levers, and a crew, learns to command a team, in Java, offline. The real skill is knowing what to ask and how to constrain the answer. Scan to connect on LinkedIn and grab the code on GitHub. What do you want to break first?");
   }
 
-  await pres.writeFile({ fileName: "../One-Prompt-Many-Workers-Light.pptx" });
+  // Absolute, from this file: a relative path silently wrote the deck into
+  // whatever directory the generator happened to be run from, which is how a
+  // dead QR code survived a rebuild.
+  const OUT = require("path").join(__dirname, "..", "One-Prompt-Many-Workers-Light.pptx");
+  await pres.writeFile({ fileName: OUT });
   console.log(`wrote light deck, ${count} slides. LinkedIn:`, LINKEDIN, "GitHub:", GITHUB);
 }
 
