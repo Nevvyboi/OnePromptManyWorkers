@@ -29,7 +29,7 @@ else
 fi
 
 TUNNEL_PID=""
-cleanup() { [[ -n "$TUNNEL_PID" ]] && kill "$TUNNEL_PID" 2>/dev/null; pkill -f "ssh -N .*172.18.0.1:8080" 2>/dev/null; true; }
+cleanup() { pkill -f "autossh.*172.18.0.1:8080" 2>/dev/null; true; }
 trap cleanup EXIT
 
 if [[ "${1:-}" != "--local" ]]; then
@@ -41,26 +41,23 @@ if [[ "${1:-}" != "--local" ]]; then
   URL="${PUBLIC_URL:-https://live.floati.life}"
   command -v ssh >/dev/null || { echo "ssh missing"; exit 1; }
   echo "opening the tunnel to $HOST..."
-  # Keep it up. A dropped tunnel shows the room "the crew is not awake yet",
-  # so if ssh dies we dial straight back rather than waiting to be noticed.
-  (
-    while true; do
-      ssh -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
-          -o StrictHostKeyChecking=accept-new \
-          -R 172.18.0.1:8080:127.0.0.1:8080 "$HOST" 2>/dev/null
-      echo "  tunnel dropped, redialling..." >&2
-      sleep 2
-    done
-  ) &
-  TUNNEL_PID=$!
-  # wait for the far end to actually be listening, not just for ssh to start
+  # autossh, not a hand rolled loop. Closing the lid breaks the connection, and a
+  # loop that lives inside this script dies with it, which left the room looking
+  # at "the crew is not awake yet" with no way back except a restart. autossh
+  # owns the tunnel, watches it, and rebuilds it after sleep or a network change.
+  command -v autossh >/dev/null || { echo "autossh missing: brew install autossh"; exit 1; }
+  pkill -f "autossh.*172.18.0.1:8080" 2>/dev/null || true
+  AUTOSSH_GATETIME=0 AUTOSSH_POLL=20 autossh -M 0 -f -N \
+      -o ExitOnForwardFailure=yes -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
+      -o StrictHostKeyChecking=accept-new -o ExitOnForwardFailure=yes \
+      -R 172.18.0.1:8080:127.0.0.1:8080 "$HOST"
   for _ in $(seq 1 20); do
     ssh -o BatchMode=yes -o ConnectTimeout=5 "$HOST" \
         'ss -ltn 2>/dev/null | grep -q "172.18.0.1:8080"' 2>/dev/null && break
     sleep 1
   done
   ssh -o BatchMode=yes "$HOST" 'ss -ltn 2>/dev/null | grep -q "172.18.0.1:8080"' 2>/dev/null \
-    && echo "  tunnel confirmed on the far end" \
+    && echo "  tunnel confirmed on the far end (autossh will keep it there)" \
     || { echo "  tunnel did not come up. Run with --local, or check: ssh $HOST"; exit 1; }
   ARGS+=(--live.publicUrl="$URL")
   echo
