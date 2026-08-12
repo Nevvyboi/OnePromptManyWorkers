@@ -1,0 +1,49 @@
+# live.floati.life -> the laptop, over an ssh reverse tunnel.
+#
+# The laptop opens  ssh -R 8080:127.0.0.1:8080 floati , which makes the laptop's
+# port 8080 appear on this server's loopback. nginx is the public face: it holds
+# the certificate and the name, and forwards everything to that loopback port.
+#
+# Nothing here touches the floati.life server block. Delete this file, unlink it
+# from sites-enabled, reload, and the server is exactly as it was.
+#
+# The buffering settings are the point. A proxy that buffers a server-sent event
+# stream delivers nothing until the run is over, which is how the Cloudflare
+# tunnel broke the stage. Here we own the proxy, so we simply turn it off.
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name live.floati.life;
+
+    # certbot rewrites this block to redirect to https once the cert exists
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade           $http_upgrade;
+        proxy_set_header Connection        "";
+
+        # live streams: never buffer, never compress, never time out
+        proxy_buffering     off;
+        proxy_cache         off;
+        gzip                off;
+        chunked_transfer_encoding on;
+        proxy_read_timeout  1h;
+        proxy_send_timeout  1h;
+
+        # a generated page carries embedded photographs
+        client_max_body_size 12m;
+    }
+
+    # if the laptop is not plugged in, say so in words rather than 502
+    error_page 502 504 = @down;
+    location @down {
+        default_type text/html;
+        return 200 '<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Not started yet</title><style>body{background:#0B0D12;color:#ECE7DE;font:16px/1.6 -apple-system,system-ui,sans-serif;display:grid;place-items:center;height:100vh;margin:0;text-align:center;padding:2rem}h1{font-size:1.3rem;margin:0 0 .5rem}p{color:#8A8FA0;margin:0}</style><h1>The crew is not awake yet.</h1><p>Give it a minute and refresh.</p>';
+    }
+}
