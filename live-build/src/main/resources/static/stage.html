@@ -298,7 +298,7 @@
 <body>
   <header class="topbar">
     <span class="live"><span class="rec"></span>LIVE BUILD</span>
-    <span class="sub">one prompt · many workers · every token on this laptop</span>
+    <span class="sub" id="subline">one prompt · many workers · the crew on this laptop</span>
     <span class="spacer"></span>
     <span class="stat" id="runTotal"></span>
     <span class="node" id="modeTop"></span>
@@ -386,7 +386,7 @@
   <footer class="botbar">
     <span><b id="tally">0</b> ideas sent by the room</span>
     <span class="spacer"></span>
-    <span class="qr">scan the QR to join · everything runs <b>on this laptop</b></span>
+    <span class="qr" id="qrline">scan the QR to join · the crew runs <b>on this laptop</b></span>
     <span class="spacer"></span>
     <span id="mode">local</span>
   </footer>
@@ -605,7 +605,14 @@
   // ---------- SSE ----------
   const es = new EventSource("/api/events");
   const J = e => JSON.parse(e.data);
-  es.addEventListener("info", e => { const d=J(e); const m = d.mock ? "mock mode" : ((d.model || "local model") + " · local");
+  es.addEventListener("info", e => { const d=J(e);
+    // Only claim every token stays here when that is actually true
+    if (d.local !== undefined) {
+      const sub = document.getElementById("subline"), qr = document.getElementById("qrline");
+      if (sub) sub.textContent = "one prompt · many workers · " + (d.local ? "every token on this laptop" : "the crew on this laptop");
+      if (qr) qr.innerHTML = "scan the QR to join · the crew runs <b>on this laptop</b>";
+    }
+    const m = d.mock ? "mock mode" : ((d.model || "local model") + (d.local ? " · local" : " · hosted"));
     document.getElementById("mode").textContent = m; document.getElementById("modeTop").textContent = m;
     if(d.tally!=null) document.getElementById("tally").textContent=d.tally; });
   es.addEventListener("tally", e => { document.getElementById("tally").textContent = J(e).total; });

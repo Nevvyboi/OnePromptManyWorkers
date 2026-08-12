@@ -108,7 +108,7 @@ async function build() {
     s.addText([
       { text: "Nevin Tom", options: { color: INK, bold: true } },
       { text: "  /  BBD", options: { color: INDIGO, bold: true } },
-      { text: "\nlocal model   ·   no cloud   ·   live code", options: { color: MUTED } },
+      { text: "\nreal agents   ·   real code   ·   built live in the room", options: { color: MUTED } },
     ], { x: MX, y: 5.55, w: 7, h: 0.9, fontFace: MONO, fontSize: 12.5, lineSpacing: 24 });
     const ox = 9.15, oy = 3.75, ex = 11.75;
     const targets = [[1.4, TEAL], [2.55, VIOLET], [3.75, INDIGO], [4.95, ROSE], [6.1, SKY]];
@@ -426,7 +426,7 @@ async function build() {
     await chip(s, 12.55, 2.15, 0.8, "FiCloud", FAINT);
     s.addShape("line", { x: 12.15, y: 1.75, w: 0.8, h: 0.8, line: { color: ROSE, width: 2.5 } });
     s.addText("no cloud", { x: 11.85, y: 2.72, w: 1.4, h: 0.3, align: "center", fontFace: MONO, fontSize: 10, color: FAINT });
-    s.addNotes("The model runs entirely on this laptop. The client's data never leaves the building. No token bill that scales with success. Works on a plane. For a bank, it never leaves the building is the whole conversation.");
+    s.addNotes("Say which one you are running tonight before this slide. On the local model every token stays here. On a hosted model the crew still runs here and only the writing goes out. The point is that the harness does not care.  Original: The model runs entirely on this laptop. The client's data never leaves the building. No token bill that scales with success. Works on a plane. For a bank, it never leaves the building is the whole conversation.");
   }
 
   (await act("iv", "Act four", "Control Beyond\nthe Prompt", "The prompt is one lever. There are five more, and they are where reliability comes from.", VIOLET, "FiSliders"))

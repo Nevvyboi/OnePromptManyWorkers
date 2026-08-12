@@ -1997,8 +1997,13 @@ public class CrewService {
 
     public Map<String, Object> info(String audienceUrl) {
         // the stage banner used to say "qwen" no matter what was loaded
+        // The page used to promise the room that nothing they typed left the
+        // building. That is only true when the model is on this laptop. Say which
+        // it is, and let the pages tell the truth for the run they are in.
+        boolean local = !"api".equals(modelName) && (apiBaseUrl == null || apiBaseUrl.isBlank());
         return Map.of("audienceUrl", audienceUrl, "mock", mock, "open", submissionsOpen,
-                "model", modelName);
+                "model", modelName, "local", local,
+                "where", local ? "on a laptop in this room" : "on a laptop in this room, with the writing done by a hosted model");
     }
 
     /**

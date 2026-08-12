@@ -79,7 +79,7 @@
     <div class="err" id="err"></div>
     <button id="send">Send it to the crew</button>
 
-    <div class="hint">The workers run on <b>a laptop in this room</b>. Nothing you type leaves the building.</div>
+    <div class="hint" id="hint">The workers run on <b>a laptop in this room</b>.</div>
     <div class="dots"><i style="background:var(--teal)"></i><i style="background:var(--violet)"></i><i style="background:var(--amber)"></i><i style="background:var(--rose)"></i><i style="background:var(--sky)"></i></div>
   </div>
 
@@ -99,7 +99,7 @@
     <p>The crew is finishing what the room already sent. Watch the big screen.</p>
   </div>
 
-  <div class="foot">served locally · bbd tech talk</div>
+  <div class="foot" id="foot">bbd tech talk</div>
 
 <script>
   const $ = s => document.querySelector(s);
@@ -118,9 +118,19 @@
   }
   // A light poll, deliberately not SSE: the event stream carries the whole
   // queue, and a phone has no business seeing everyone else's ideas.
+  let hintSet = false;
   async function pollGate(){
     try{
       const d = await (await fetch("/api/info")).json();
+      // Tell the room the truth for the run they are actually in. Promising that
+      // nothing leaves the building is only honest when the model is on the laptop.
+      if (d.local !== undefined && !hintSet){
+        hintSet = true;
+        document.getElementById("hint").innerHTML = d.local
+          ? 'The workers run on <b>a laptop in this room</b>. Nothing you type leaves the building.'
+          : 'The crew runs on <b>a laptop in this room</b>. The writing is done by a hosted model, so your line does leave the building.';
+        document.getElementById("foot").textContent = d.local ? "served locally · bbd tech talk" : "bbd tech talk";
+      }
       if (d.open === false) setOpen(false);
       else if (!document.getElementById("done").classList.contains("show")) setOpen(true);
     }catch(e){}
